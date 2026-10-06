@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Campaign Bulk Builder</title>
+<meta name="description" content="Turn a campaign structure doc into a Google Ads Editor import file. Runs in your browser; files are never uploaded.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Crect width='22' height='22' rx='5' fill='%232a49c5'/%3E%3Crect x='4' y='5' width='14' height='2.6' rx='1' fill='white'/%3E%3Crect x='4' y='9.7' width='9.5' height='2.6' rx='1' fill='white' opacity='.75'/%3E%3Crect x='4' y='14.4' width='6' height='2.6' rx='1' fill='white' opacity='.5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="masthead">
+    <div class="id">
+      <div class="glyph" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2.5" width="18" height="3.4" rx="1.2" fill="currentColor"/><rect x="2" y="9.3" width="12" height="3.4" rx="1.2" fill="currentColor" opacity=".75"/><rect x="2" y="16.1" width="8" height="3.4" rx="1.2" fill="currentColor" opacity=".5"/><path d="M17 9.5v8m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h1>Campaign Bulk Builder</h1>
+        <p class="sub">Load a campaign structure doc, check it, and export one file for Google Ads Editor.</p>
+      </div>
+    </div>
+    <div class="src-actions">
+      <label for="fileIn" class="btn btn-primary" tabindex="0" id="fileLabel">Load campaign doc</label>
+      <input id="fileIn" type="file" accept=".docx,.xlsx,.xlsm,.csv,.tsv,.txt,.md,.markdown,.html,.htm" class="vh">
+      <button id="pasteToggle" type="button" class="btn">Paste text</button>
+      <button id="aiQuick" type="button" class="btn" hidden>Read with AI</button>
+    </div>
+  </header>
+
+  <section class="docbar" aria-label="Loaded document" id="docbar" hidden>
+    <div class="doc-file"><span class="doc-badge" id="docBadge">DOCX</span><span id="docName"></span><span id="sampleTag" class="tag" hidden>Sample</span><span id="modeTag" class="mode-tag">Read by rules</span></div>
+    <dl class="stats">
+      <div><dt>Campaigns</dt><dd id="stC">0</dd></div>
+      <div><dt>Ad groups</dt><dd id="stG">0</dd></div>
+      <div><dt>Keywords</dt><dd id="stK">0</dd></div>
+      <div><dt>RSAs</dt><dd id="stA">0</dd></div>
+    </dl>
+    <span id="statusPill" class="pill ok">Ready</span>
+  </section>
+
+  <section id="pastePanel" class="panel paste" hidden>
+    <div class="field">
+      <label class="lbl" for="pasteArea">Paste the doc text</label>
+      <textarea id="pasteArea" placeholder="Copy everything from Google Docs, Word, a spreadsheet or a chat answer and paste it here. Headings, lists, tables and plain lines all work."></textarea>
+    </div>
+    <div class="row"><button id="pasteParse" type="button" class="btn btn-primary">Read pasted text</button><button id="pasteCancel" type="button" class="btn btn-ghost">Cancel</button></div>
+  </section>
+
+  <div id="notes" class="notes" aria-live="polite"></div>
+
+  <section class="panel report" id="reportPanel" hidden>
+    <div class="report-head">
+      <h2 id="reportTitle">Import report</h2>
+      <p class="hint">Pick what a line is and the tool adds it, or remembers the label for next time.</p>
+    </div>
+    <ul class="report-list" id="reportMain"></ul>
+    <details id="reportMoreBox"><summary id="reportMoreSum"></summary><ul class="report-list" id="reportMore" style="margin-top:8px"></ul></details>
+  </section>
+
+  <details class="help" id="formatHelp">
+    <summary>What the doc can look like</summary>
+    <ul>
+      <li>Word (.docx), Excel (.xlsx, every tab), CSV, text or Markdown. From Google Docs use File, Download, Microsoft Word (.docx); from Sheets use .xlsx. Or use Paste text.</li>
+      <li>Ad groups can be headings (<code>Ad Group 1: Managed IT</code> or just <code>Managed IT</code>), table rows, table columns, spreadsheet tabs or plain lines before a <b>Keywords</b> list.</li>
+      <li>Ad text can be lists, tables with a character-count column, numbered lines (<code>Headline 3: ...</code>) or one mixed <b>Ad copy</b> list.</li>
+      <li>Settings the tool picks up: <code>Final URL</code>, <code>Locations: Austin, TX</code>, <code>Daily budget: 50</code> or <code>Monthly budget: 1,500</code>, <code>Bidding: Maximize conversions</code>, <code>Match type: Phrase</code>, <code>Path 1</code>, <code>Start date</code>.</li>
+      <li>Keywords written as <code>[keyword]</code>, <code>"keyword"</code> or <code>keyword (broad)</code> keep that match type; <code>-keyword</code> is a negative.</li>
+      <li>Anything the tool cannot place shows up in the import report, where you can teach it.</li>
+    </ul>
+  </details>
+
+  <main class="layout">
+    <aside class="rail" aria-label="Settings and export">
+      <section class="panel" id="settingsPanel">
+        <div><h2>Account defaults</h2><p class="hint">Applied to every campaign in the export. A campaign's own locations from the doc win over these.</p></div>
+
+        <div class="field">
+          <label class="lbl" for="profileSel">Client profile</label>
+          <div class="profile-row">
+            <select id="profileSel"><option value="">No profile</option></select>
+            <button type="button" class="btn btn-sm" id="profileSave">Save</button>
+            <button type="button" class="btn btn-ghost btn-sm danger" id="profileDel" hidden>Delete</button>
+          </div>
+          <p class="hint">Saves the settings below for this client. A profile loads by itself when a doc's final URL matches it.</p>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="finalUrl">Final URL</label>
+          <input id="finalUrl" type="url" placeholder="https://client-site.com/" autocomplete="off" spellcheck="false">
+          <p class="hint">Any ad group can override it.</p>
+        </div>
+
+        <div class="field">
+          <span class="lbl" id="mtLbl">Keyword match type</span>
+          <div class="seg" role="radiogroup" aria-labelledby="mtLbl">
+            <label><input type="radio" name="matchType" value="phrase" id="mt-phrase"><span>Phrase</span></label>
+            <label><input type="radio" name="matchType" value="exact" id="mt-exact"><span>Exact</span></label>
+            <label><input type="radio" name="matchType" value="broad" id="mt-broad"><span>Broad</span></label>
+            <label><input type="radio" name="matchType" value="phrase+exact" id="mt-pe"><span>Phrase + Exact</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="bidStrategy">Bid strategy</label>
+          <select id="bidStrategy">
+            <option value="maxclicks">Maximize clicks</option>
+            <option value="maxconv">Maximize conversions</option>
+            <option value="tcpa">Maximize conversions with target CPA</option>
+            <option value="manual">Manual CPC</option>
+          </select>
+        </div>
+        <div class="field" id="tcpaRow" hidden>
+          <label class="lbl" for="targetCpa">Target CPA</label>
+          <input id="targetCpa" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 45">
+        </div>
+        <div class="field" id="cpcRow" hidden>
+          <label class="lbl" for="maxCpc">Default max CPC (per ad group)</label>
+          <input id="maxCpc" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 3.50">
+        </div>
+
+        <div class="field">
+          <span class="lbl" id="locLbl">Locations</span>
+          <div class="chips" id="locChips" aria-labelledby="locLbl"></div>
+          <div class="two">
+            <select id="locAdd" aria-label="Add a country"><option value="">Add country</option><option value="__all">All countries</option></select>
+            <div class="add-row"><input id="locCustom" type="text" placeholder="City, region" aria-label="Add a city or region"><button type="button" class="btn btn-sm" id="locCustomAdd">Add</button></div>
+          </div>
+          <label class="check"><input type="checkbox" id="presenceOnly"><span>Presence only<small>People in or regularly in these locations, not people searching about them.</small></span></label>
+        </div>
+
+        <div class="field">
+          <span class="lbl" id="langLbl">Languages</span>
+          <div class="langs" id="langs" aria-labelledby="langLbl"></div>
+          <select id="langMore" aria-label="Add another language"><option value="">More languages</option></select>
+        </div>
+
+        <label class="check"><input type="checkbox" id="searchPartners"><span>Include Search partners<small>Off keeps spend on Google Search only.</small></span></label>
+
+        <div class="field">
+          <span class="lbl" id="csLbl">Campaign status on import</span>
+          <div class="seg" role="radiogroup" aria-labelledby="csLbl">
+            <label><input type="radio" name="campStatus" value="Paused" id="cs-paused"><span>Paused</span></label>
+            <label><input type="radio" name="campStatus" value="Enabled" id="cs-enabled"><span>Enabled</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="startDate">Start date <span class="mono">optional</span></label>
+          <input id="startDate" type="date">
+        </div>
+      </section>
+
+      <section class="panel" id="exportPanel">
+        <div class="status-line"><h2>Export</h2><span id="exportPill" class="pill-sm ok">Ready</span></div>
+        <ul id="errList" class="issues errs"></ul>
+        <details class="warnbox" id="warnBox" hidden><summary id="warnSum"></summary><ul id="warnList" class="issues warns"></ul></details>
+        <div class="export-actions">
+          <button id="dlBtn" type="button" class="btn btn-primary btn-block">Download CSV for Ads Editor</button>
+          <button id="copyBtn" type="button" class="btn btn-block">Copy for Editor paste</button>
+        </div>
+        <p id="exportMeta" class="hint mono"></p>
+        <div class="field" id="fallbackBox" hidden>
+          <label class="lbl" for="fallbackText" id="fallbackLbl">Copy this text</label>
+          <textarea id="fallbackText" readonly></textarea>
+        </div>
+        <div><h3>Import in Google Ads Editor</h3></div>
+        <ol class="steps">
+          <li>Open the account in Ads Editor and click <b>Get recent changes</b>.</li>
+          <li>Go to <b>Account &gt; Import &gt; From file</b> and pick the CSV. If you copied instead, use <b>Paste text</b>.</li>
+          <li>Check the preview, then <b>Finish and review changes</b> and <b>Keep</b>.</li>
+          <li>If Editor flags <b>EU political ads</b> on the new campaigns, select them and set it to No.</li>
+          <li>Locations without an ID are matched by name. Check them in the <b>Locations</b> tab.</li>
+          <li>Review, then <b>Post</b>. Campaigns arrive with the status you picked above.</li>
+        </ol>
+      </section>
+
+      <details class="panel" id="aiPanel">
+        <summary><h2>AI reading</h2><span class="pill-sm" id="aiState">Optional</span></summary>
+        <p class="hint">For docs the rules can't follow. Claude reads the whole doc and the result goes through the same checks.</p>
+        <p class="privacy">This sends the doc text to Anthropic's API using your own API key. Nothing else leaves your browser, and nothing is sent until you click Read with AI.</p>
+        <div class="field">
+          <label class="lbl" for="aiKey">Anthropic API key</label>
+          <div class="key-row"><input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."><button type="button" class="btn btn-sm" id="aiKeyShow">Show</button></div>
+          <label class="check"><input type="checkbox" id="aiRemember"><span>Remember on this device<small>Stored in this browser only. Leave off on shared computers.</small></span></label>
+        </div>
+        <div class="field">
+          <label class="lbl" for="aiModel">Model</label>
+          <select id="aiModel"></select>
+        </div>
+        <div class="row">
+          <button type="button" class="btn btn-primary" id="aiRun">Read with AI</button>
+          <button type="button" class="btn btn-ghost" id="aiStop" hidden>Stop</button>
+        </div>
+        <p class="progress" id="aiProgress" aria-live="polite"></p>
+        <button type="button" class="btn btn-ghost btn-sm" id="aiBack" hidden>Back to the rule-based read</button>
+      </details>
+
+      <details class="panel" id="memPanel">
+        <summary><h2>Memory</h2><span class="pill-sm" id="memCount">0 labels</span></summary>
+        <p class="hint">Labels you taught from the import report. They apply to every doc you load in this browser, and they guide AI reading too.</p>
+        <ul class="mem-list" id="memList"></ul>
+        <div class="row">
+          <button type="button" class="btn btn-sm" id="memExport">Export memory</button>
+          <label for="memImportIn" class="btn btn-sm" tabindex="0" id="memImportLbl">Import memory</label>
+          <input id="memImportIn" type="file" accept=".json,application/json" class="vh">
+        </div>
+        <p class="hint">Share the exported file with your team so everyone's tool reads docs the same way. It also carries client profiles.</p>
+      </details>
+    </aside>
+
+    <section class="tree" aria-label="Campaigns">
+      <div class="tree-head">
+        <h2>Campaigns and ad groups</h2>
+        <div class="row">
+          <button type="button" class="btn btn-ghost btn-sm" id="toggleAll">Expand all</button>
+          <button type="button" class="btn btn-sm" id="addCamp">+ Campaign</button>
+        </div>
+      </div>
+      <div id="campaigns" class="tree"></div>
+      <section class="panel" id="acctNegPanel">
+        <div class="field">
+          <label class="lbl" for="acctNeg">Negative keywords for every campaign <span class="mono" id="acctNegCount"></span></label>
+          <textarea id="acctNeg" class="neg-area" spellcheck="false" placeholder="free&#10;jobs&#10;careers"></textarea>
+          <p class="hint">Added to each campaign as campaign-level negatives. Phrase match unless written as [exact] or word (broad).</p>
+        </div>
+      </section>
+      <details class="panel preview" id="previewBox">
+        <summary>Preview import rows</summary>
+        <p class="hint">First 80 rows, exactly as they go into the CSV. Blank columns are left out.</p>
+        <div class="tablewrap"><table id="previewTable"></table></div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Runs in your browser. Docs are never uploaded; only AI reading sends text, and only when you ask.</span>
+    <span><a href="campaign-builder.html" id="offlineLink" download>Download the offline version</a></span>
+  </footer>
+</div>
+<div id="dropOverlay" hidden><div>Drop the file to load it</div></div>
+<div id="toast" role="status" hidden></div>
+
+<script src="vendor/mammoth.browser.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/anthropic-sdk.min.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/readers.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/sample.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
