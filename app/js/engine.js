@@ -259,12 +259,12 @@
     : /network|partner/.test(lk) ? 'networks' : null;
 
   const AG_NUM = /^(?:ad[\s-]*group|adgroup)\s*#?\s*(\d{1,3}(?:\.\d{1,3})*[a-z]?)\s*(?:[-:.)|–—]\s*|\s+)(.+)$/i;
-  const AG_ABBR = /^AG\s*#?\s*(\d{1,3}(?:\.\d{1,3})*[a-z]?)\s*[-:.)|–—]\s*(.+)$/;
+  const AG_ABBR = /^AG\s*#?\s*(\d{1,3}(?:\.\d{1,3})*[a-z]?)?\s*[-:.)|–—]\s*(.+)$/;
   const AG_NAMED = /^(?:ad[\s-]*group|adgroup)(?:\s*name)?\s*(?::|\||\s[-–—]\s|[–—])\s*(.+)$/i;
   const AG_ONLY = /^(?:ad[\s-]*group|adgroup)\s*#?\s*(\d{1,3}(?:\.\d{1,3})*[a-z]?)\s*[:.]?$/i;
   const AG_LIST = /^ad[\s-]*groups\s*(?:\([^)]*\))?\s*(?::|\s[-–—]\s)\s*(.+)$/i;
-  const CAMP_NUM = /^campaign\s*#?\s*(?:\d{1,3}(?:\.\d{1,3})*\s*(?:[-:.)|–—]\s*|\s+)|[a-z]\s*(?:[:.)|–—]|\s-\s)\s*)(.+)$/i;
-  const CAMP_NAMED = /^campaign(?:\s*name)?\s*(?::|\||\s[-–—]\s|[–—])\s*(.+)$/i;
+  const CAMP_NUM = /^(?:google\s+(?:ads\s+)?)?(?:search\s+)?campaign\s*#?\s*(?:\d{1,3}(?:\.\d{1,3})*\s*(?:[-:.)|–—]\s*|\s+)|[a-z]\s*(?:[:.)|–—]|\s-\s)\s*)(.+)$/i;
+  const CAMP_NAMED = /^(?:google\s+(?:ads\s+)?)?(?:search\s+)?campaign(?:\s*name)?\s*(?::|\||\s[-–—]\s|[–—])\s*(.+)$/i;
   const NUMBERED = /^(headline|description|desc)\s*#?\s*(\d{1,2})\s*(?:\([^)]*\))?\s*(?:[:.)\-–—|=]\s*|\t)(.+)$/i;
   const NUMBERED_HD = /^([hd])\s*(\d{1,2})\s*(?:\([^)]*\))?\s*(?:[:.)|=]|\s[-–—]\s|[–—]|\t)\s*(.+)$/i;
   const NUMBERED_ONLY = /^(headline|description|desc)\s*#?\s*(\d{1,2})\s*(?:\([^)]*\))?\s*:?$/i;
@@ -286,7 +286,7 @@
   function tidyCampaign(s) {
     return norm(s).replace(/^([A-Z0-9]{1,2})\s*[-–—.:)]\s*/, '$1 - ');
   }
-  const cleanCampaignName = s => tidyCampaign(cleanName(stripOutline(s).replace(/^campaign\s*#?\s*\d{1,3}(?:\.\d{1,3})*\s*[-:.)|–—]\s*/i, '')));
+  const cleanCampaignName = s => tidyCampaign(cleanName(stripOutline(s).replace(/^(?:google\s+(?:ads\s+)?)?(?:search\s+)?campaign\s*#?\s*(?:\d{1,3}(?:\.\d{1,3})*)?\s*[-:.)|–—]\s*/i, '')));
 
   const isNoteLine = t => /^\(.*\)$|^\[.*\]$/.test(t)
     || /^(?:note|notes|tip|tips|important|reminder|optional|n\.?b\.?|todo|tbd|example|e\.g\.|eg)\b\s*[:\-–—]/i.test(t)
@@ -306,78 +306,253 @@
   const COUNTRIES = [
     ['United States', '2840', ['us', 'usa', 'u s', 'u s a', 'united states', 'united states of america', 'america', 'the us', 'the usa', 'the united states']],
     ['Canada', '2124', ['ca', 'can', 'canada']],
-    ['United Kingdom', '2826', ['uk', 'u k', 'gb', 'gbr', 'united kingdom', 'great britain', 'britain', 'the uk', 'the united kingdom']],
+    ['United Kingdom', '2826', ['uk', 'u k', 'gb', 'gbr', 'united kingdom', 'great britain', 'britain', 'the uk', 'the united kingdom', 'united kingdom of great britain northern ireland']],
     ['Australia', '2036', ['au', 'aus', 'australia']],
     ['New Zealand', '2554', ['nz', 'new zealand']],
     ['Ireland', '2372', ['ie', 'ireland', 'republic of ireland']],
-    ['United Arab Emirates', '2784', ['uae', 'u a e', 'ae', 'united arab emirates', 'emirates', 'the uae']],
+    ['United Arab Emirates', '2784', ['uae', 'u a e', 'ae', 'united arab emirates', 'emirates', 'the uae', 'the united arab emirates']],
     ['Saudi Arabia', '2682', ['ksa', 'saudi', 'saudi arabia', 'kingdom of saudi arabia']],
-    ['Qatar', '2634', ['qa', 'qatar']],
-    ['Kuwait', '2414', ['kw', 'kuwait']],
-    ['Bahrain', '2048', ['bh', 'bahrain']],
-    ['Oman', '2512', ['om', 'oman']],
-    ['Jordan', '2400', ['jordan']],
-    ['Lebanon', '2422', ['lebanon']],
-    ['Egypt', '2818', ['eg', 'egypt']],
-    ['Morocco', '2504', ['morocco']],
-    ['Turkey', '2792', ['tr', 'turkey', 'turkiye', 'türkiye']],
-    ['Israel', '2376', ['israel']],
-    ['Pakistan', '2586', ['pk', 'pakistan']],
-    ['India', '2356', ['india', 'bharat']],
-    ['Bangladesh', '2050', ['bd', 'bangladesh']],
-    ['Sri Lanka', '2144', ['lk', 'sri lanka']],
-    ['Nepal', '2524', ['nepal']],
-    ['Maldives', '2462', ['maldives']],
-    ['Singapore', '2702', ['sg', 'singapore']],
+    ['Qatar', '2634', ['qa', 'qatar', 'state of qatar']],
+    ['Kuwait', '2414', ['kw', 'kuwait', 'state of kuwait']],
+    ['Bahrain', '2048', ['bh', 'bahrain', 'kingdom of bahrain']],
+    ['Oman', '2512', ['om', 'oman', 'sultanate of oman']],
+    ['Jordan', '2400', ['jordan', 'hashemite kingdom of jordan']],
+    ['Lebanon', '2422', ['lebanon', 'lebanese republic']],
+    ['Egypt', '2818', ['eg', 'egypt', 'arab republic of egypt']],
+    ['Morocco', '2504', ['morocco', 'kingdom of morocco']],
+    ['Turkey', '2792', ['tr', 'turkey', 'turkiye', 'türkiye', 'republic of türkiye', 'republic of turkiye']],
+    ['Israel', '2376', ['israel', 'state of israel']],
+    ['Pakistan', '2586', ['pk', 'pakistan', 'islamic republic of pakistan']],
+    ['India', '2356', ['india', 'bharat', 'republic of india']],
+    ['Bangladesh', '2050', ['bd', 'bangladesh', 'people s republic of bangladesh']],
+    ['Sri Lanka', '2144', ['lk', 'sri lanka', 'democratic socialist republic of sri lanka']],
+    ['Nepal', '2524', ['nepal', 'federal democratic republic of nepal']],
+    ['Maldives', '2462', ['maldives', 'republic of maldives']],
+    ['Singapore', '2702', ['sg', 'singapore', 'republic of singapore']],
     ['Malaysia', '2458', ['malaysia']],
-    ['Indonesia', '2360', ['indonesia']],
-    ['Philippines', '2608', ['ph', 'philippines', 'the philippines']],
-    ['Thailand', '2764', ['th', 'thailand']],
-    ['Vietnam', '2704', ['vn', 'vietnam', 'viet nam']],
-    ['Hong Kong', '2344', ['hk', 'hong kong']],
-    ['Taiwan', '2158', ['tw', 'taiwan']],
+    ['Indonesia', '2360', ['indonesia', 'republic of indonesia']],
+    ['Philippines', '2608', ['ph', 'philippines', 'the philippines', 'republic of the philippines']],
+    ['Thailand', '2764', ['th', 'thailand', 'kingdom of thailand']],
+    ['Vietnam', '2704', ['vn', 'vietnam', 'viet nam', 'socialist republic of viet nam']],
+    ['Hong Kong', '2344', ['hk', 'hong kong', 'hong kong special administrative region of china', 'hong kong sar']],
+    ['Taiwan', '2158', ['tw', 'taiwan', 'taiwan province of china']],
     ['Japan', '2392', ['jp', 'japan']],
-    ['South Korea', '2410', ['kr', 'korea', 'south korea', 'republic of korea']],
-    ['China', '2156', ['cn', 'china']],
-    ['Germany', '2276', ['de', 'germany', 'deutschland']],
-    ['France', '2250', ['fr', 'france']],
-    ['Spain', '2724', ['spain', 'españa', 'espana']],
-    ['Italy', '2380', ['italy', 'italia']],
-    ['Portugal', '2620', ['pt', 'portugal']],
-    ['Netherlands', '2528', ['nl', 'netherlands', 'the netherlands', 'holland']],
-    ['Belgium', '2056', ['belgium']],
-    ['Luxembourg', '2442', ['luxembourg']],
-    ['Switzerland', '2756', ['ch', 'switzerland']],
-    ['Austria', '2040', ['austria']],
-    ['Sweden', '2752', ['se', 'sweden']],
-    ['Norway', '2578', ['norway']],
-    ['Denmark', '2208', ['dk', 'denmark']],
-    ['Finland', '2246', ['fi', 'finland']],
-    ['Iceland', '2352', ['iceland']],
-    ['Poland', '2616', ['pl', 'poland']],
+    ['South Korea', '2410', ['kr', 'korea', 'south korea', 'republic of korea', 'korea republic of', 'rok']],
+    ['China', '2156', ['cn', 'china', 'people s republic of china']],
+    ['Germany', '2276', ['de', 'germany', 'deutschland', 'federal republic of germany']],
+    ['France', '2250', ['fr', 'france', 'french republic']],
+    ['Spain', '2724', ['spain', 'españa', 'espana', 'kingdom of spain']],
+    ['Italy', '2380', ['italy', 'italia', 'italian republic']],
+    ['Portugal', '2620', ['pt', 'portugal', 'portuguese republic']],
+    ['Netherlands', '2528', ['nl', 'netherlands', 'the netherlands', 'holland', 'kingdom of the netherlands']],
+    ['Belgium', '2056', ['belgium', 'kingdom of belgium']],
+    ['Luxembourg', '2442', ['luxembourg', 'grand duchy of luxembourg']],
+    ['Switzerland', '2756', ['ch', 'switzerland', 'swiss confederation']],
+    ['Austria', '2040', ['austria', 'republic of austria']],
+    ['Sweden', '2752', ['se', 'sweden', 'kingdom of sweden']],
+    ['Norway', '2578', ['norway', 'kingdom of norway']],
+    ['Denmark', '2208', ['dk', 'denmark', 'kingdom of denmark']],
+    ['Finland', '2246', ['fi', 'finland', 'republic of finland']],
+    ['Iceland', '2352', ['iceland', 'republic of iceland']],
+    ['Poland', '2616', ['pl', 'poland', 'republic of poland']],
     ['Czechia', '2203', ['cz', 'czechia', 'czech republic']],
-    ['Slovakia', '2703', ['slovakia']],
+    ['Slovakia', '2703', ['slovakia', 'slovak republic']],
     ['Hungary', '2348', ['hu', 'hungary']],
     ['Romania', '2642', ['ro', 'romania']],
-    ['Bulgaria', '2100', ['bg', 'bulgaria']],
-    ['Greece', '2300', ['gr', 'greece']],
-    ['Croatia', '2191', ['hr', 'croatia']],
-    ['Serbia', '2688', ['rs', 'serbia']],
-    ['Slovenia', '2705', ['slovenia']],
-    ['Estonia', '2233', ['estonia']],
-    ['Cyprus', '2196', ['cy', 'cyprus']],
-    ['Malta', '2470', ['mt', 'malta']],
+    ['Bulgaria', '2100', ['bg', 'bulgaria', 'republic of bulgaria']],
+    ['Greece', '2300', ['gr', 'greece', 'hellenic republic']],
+    ['Croatia', '2191', ['hr', 'croatia', 'republic of croatia']],
+    ['Serbia', '2688', ['rs', 'serbia', 'republic of serbia']],
+    ['Slovenia', '2705', ['slovenia', 'republic of slovenia']],
+    ['Estonia', '2233', ['estonia', 'republic of estonia']],
+    ['Cyprus', '2196', ['cy', 'cyprus', 'republic of cyprus']],
+    ['Malta', '2470', ['mt', 'malta', 'republic of malta']],
     ['Ukraine', '2804', ['ua', 'ukraine']],
-    ['South Africa', '2710', ['za', 'rsa', 'south africa']],
-    ['Nigeria', '2566', ['ng', 'nigeria']],
-    ['Kenya', '2404', ['ke', 'kenya']],
-    ['Ghana', '2288', ['gh', 'ghana']],
-    ['Mexico', '2484', ['mx', 'mexico']],
-    ['Brazil', '2076', ['br', 'brazil', 'brasil']],
-    ['Argentina', '2032', ['ar', 'argentina']],
-    ['Chile', '2152', ['cl', 'chile']],
-    ['Colombia', '2170', ['co', 'colombia']],
-    ['Peru', '2604', ['pe', 'peru']]
+    ['South Africa', '2710', ['za', 'rsa', 'south africa', 'republic of south africa']],
+    ['Nigeria', '2566', ['ng', 'nigeria', 'federal republic of nigeria']],
+    ['Kenya', '2404', ['ke', 'kenya', 'republic of kenya']],
+    ['Ghana', '2288', ['gh', 'ghana', 'republic of ghana']],
+    ['Mexico', '2484', ['mx', 'mexico', 'united mexican states']],
+    ['Brazil', '2076', ['br', 'brazil', 'brasil', 'federative republic of brazil']],
+    ['Argentina', '2032', ['ar', 'argentina', 'argentine republic']],
+    ['Chile', '2152', ['cl', 'chile', 'republic of chile']],
+    ['Colombia', '2170', ['co', 'colombia', 'republic of colombia']],
+    ['Peru', '2604', ['pe', 'peru', 'republic of peru']],
+    ['Afghanistan', '2004', ['afghanistan', 'islamic republic of afghanistan']],
+    ['Aland Islands', '2248', ['aland islands', 'åland islands']],
+    ['Albania', '2008', ['albania', 'republic of albania']],
+    ['Algeria', '2012', ['algeria', 'people s democratic republic of algeria']],
+    ['American Samoa', '2016', ['american samoa']],
+    ['Andorra', '2020', ['andorra', 'principality of andorra']],
+    ['Angola', '2024', ['angola', 'republic of angola']],
+    ['Anguilla', '2660', ['anguilla']],
+    ['Antarctica', '2010', ['antarctica']],
+    ['Antigua and Barbuda', '2028', ['antigua barbuda']],
+    ['Armenia', '2051', ['armenia', 'republic of armenia']],
+    ['Aruba', '2533', ['aruba']],
+    ['Azerbaijan', '2031', ['azerbaijan', 'republic of azerbaijan']],
+    ['Barbados', '2052', ['barbados']],
+    ['Belarus', '2112', ['belarus', 'republic of belarus']],
+    ['Belize', '2084', ['belize']],
+    ['Benin', '2204', ['benin', 'republic of benin']],
+    ['Bermuda', '2060', ['bermuda']],
+    ['Bhutan', '2064', ['bhutan', 'kingdom of bhutan']],
+    ['Bolivia', '2068', ['bolivia', 'bolivia plurinational state of', 'plurinational state of bolivia']],
+    ['Bosnia and Herzegovina', '2070', ['bosnia herzegovina', 'republic of bosnia herzegovina', 'bosnia']],
+    ['Botswana', '2072', ['botswana', 'republic of botswana']],
+    ['Bouvet Island', '2074', ['bouvet island']],
+    ['British Indian Ocean Territory', '2086', ['british indian ocean territory']],
+    ['British Virgin Islands', '2092', ['british virgin islands', 'virgin islands british']],
+    ['Brunei', '2096', ['brunei', 'brunei darussalam']],
+    ['Burkina Faso', '2854', ['burkina faso']],
+    ['Burundi', '2108', ['burundi', 'republic of burundi']],
+    ['Cambodia', '2116', ['cambodia', 'kingdom of cambodia']],
+    ['Cameroon', '2120', ['cameroon', 'republic of cameroon']],
+    ['Cape Verde', '2132', ['cape verde', 'cabo verde', 'republic of cabo verde']],
+    ['Caribbean Netherlands', '2535', ['caribbean netherlands', 'bonaire sint eustatius saba']],
+    ['Cayman Islands', '2136', ['cayman islands']],
+    ['Central African Republic', '2140', ['central african republic']],
+    ['Chad', '2148', ['chad', 'republic of chad']],
+    ['Christmas Island', '2162', ['christmas island']],
+    ['Cocos (Keeling) Islands', '2166', ['cocos keeling islands']],
+    ['Comoros', '2174', ['comoros', 'union of the comoros']],
+    ['Cook Islands', '2184', ['cook islands']],
+    ['Costa Rica', '2188', ['costa rica', 'republic of costa rica']],
+    ["Cote d'Ivoire", '2384', ['cote d ivoire', 'côte d ivoire', 'republic of côte d ivoire', 'republic of cote d ivoire', 'ivory coast']],
+    ['Cuba', '2192', ['cuba', 'republic of cuba']],
+    ['Curacao', '2531', ['curacao', 'curaçao']],
+    ['Democratic Republic of the Congo', '2180', ['democratic republic of the congo', 'congo the democratic republic of the', 'dr congo', 'drc', 'congo kinshasa']],
+    ['Djibouti', '2262', ['djibouti', 'republic of djibouti']],
+    ['Dominica', '2212', ['dominica', 'commonwealth of dominica']],
+    ['Dominican Republic', '2214', ['dominican republic']],
+    ['Ecuador', '2218', ['ecuador', 'republic of ecuador']],
+    ['El Salvador', '2222', ['el salvador', 'republic of el salvador']],
+    ['Equatorial Guinea', '2226', ['equatorial guinea', 'republic of equatorial guinea']],
+    ['Eritrea', '2232', ['eritrea', 'the state of eritrea']],
+    ['Eswatini', '2748', ['eswatini', 'kingdom of eswatini', 'swaziland']],
+    ['Ethiopia', '2231', ['ethiopia', 'federal democratic republic of ethiopia']],
+    ['Falkland Islands (Islas Malvinas)', '2238', ['falkland islands islas malvinas', 'falkland islands malvinas', 'falkland islands', 'falklands']],
+    ['Faroe Islands', '2234', ['faroe islands']],
+    ['Fiji', '2242', ['fiji', 'republic of fiji']],
+    ['French Guiana', '2254', ['french guiana']],
+    ['French Polynesia', '2258', ['french polynesia']],
+    ['French Southern and Antarctic Lands', '2260', ['french southern antarctic lands', 'french southern territories']],
+    ['Gabon', '2266', ['gabon', 'gabonese republic']],
+    ['Georgia', '2268', ['georgia']],
+    ['Gibraltar', '2292', ['gibraltar']],
+    ['Greenland', '2304', ['greenland']],
+    ['Grenada', '2308', ['grenada']],
+    ['Guadeloupe', '2312', ['guadeloupe']],
+    ['Guam', '2316', ['guam']],
+    ['Guatemala', '2320', ['guatemala', 'republic of guatemala']],
+    ['Guernsey', '2831', ['guernsey']],
+    ['Guinea', '2324', ['guinea', 'republic of guinea']],
+    ['Guinea-Bissau', '2624', ['guinea bissau', 'republic of guinea bissau']],
+    ['Guyana', '2328', ['guyana', 'republic of guyana']],
+    ['Haiti', '2332', ['haiti', 'republic of haiti']],
+    ['Heard Island and McDonald Islands', '2334', ['heard island mcdonald islands']],
+    ['Honduras', '2340', ['honduras', 'republic of honduras']],
+    ['Iran', '2364', ['iran', 'iran islamic republic of', 'islamic republic of iran']],
+    ['Iraq', '2368', ['iraq', 'republic of iraq']],
+    ['Isle of Man', '2833', ['isle of man']],
+    ['Jamaica', '2388', ['jamaica']],
+    ['Jersey', '2832', ['jersey']],
+    ['Kazakhstan', '2398', ['kazakhstan', 'republic of kazakhstan']],
+    ['Kiribati', '2296', ['kiribati', 'republic of kiribati']],
+    ['Kyrgyzstan', '2417', ['kyrgyzstan', 'kyrgyz republic']],
+    ['Laos', '2418', ['laos', 'lao people s democratic republic', 'lao pdr']],
+    ['Latvia', '2428', ['latvia', 'republic of latvia']],
+    ['Lesotho', '2426', ['lesotho', 'kingdom of lesotho']],
+    ['Liberia', '2430', ['liberia', 'republic of liberia']],
+    ['Libya', '2434', ['libya']],
+    ['Liechtenstein', '2438', ['liechtenstein', 'principality of liechtenstein']],
+    ['Lithuania', '2440', ['lithuania', 'republic of lithuania']],
+    ['Macao', '2446', ['macao', 'macao special administrative region of china', 'macau', 'macao sar']],
+    ['Madagascar', '2450', ['madagascar', 'republic of madagascar']],
+    ['Malawi', '2454', ['malawi', 'republic of malawi']],
+    ['Mali', '2466', ['mali', 'republic of mali']],
+    ['Marshall Islands', '2584', ['marshall islands', 'republic of the marshall islands']],
+    ['Martinique', '2474', ['martinique']],
+    ['Mauritania', '2478', ['mauritania', 'islamic republic of mauritania']],
+    ['Mauritius', '2480', ['mauritius', 'republic of mauritius']],
+    ['Mayotte', '2175', ['mayotte']],
+    ['Micronesia', '2583', ['micronesia', 'micronesia federated states of', 'federated states of micronesia']],
+    ['Moldova', '2498', ['moldova', 'moldova republic of', 'republic of moldova']],
+    ['Monaco', '2492', ['monaco', 'principality of monaco']],
+    ['Mongolia', '2496', ['mongolia']],
+    ['Montenegro', '2499', ['montenegro']],
+    ['Montserrat', '2500', ['montserrat']],
+    ['Mozambique', '2508', ['mozambique', 'republic of mozambique']],
+    ['Myanmar (Burma)', '2104', ['myanmar burma', 'myanmar', 'republic of myanmar', 'burma']],
+    ['Namibia', '2516', ['namibia', 'republic of namibia']],
+    ['Nauru', '2520', ['nauru', 'republic of nauru']],
+    ['New Caledonia', '2540', ['new caledonia']],
+    ['Nicaragua', '2558', ['nicaragua', 'republic of nicaragua']],
+    ['Niger', '2562', ['niger', 'republic of the niger']],
+    ['Niue', '2570', ['niue']],
+    ['Norfolk Island', '2574', ['norfolk island']],
+    ['North Korea', '2408', ['north korea', 'korea democratic people s republic of', 'democratic people s republic of korea', 'dprk']],
+    ['North Macedonia', '2807', ['north macedonia', 'republic of north macedonia', 'macedonia']],
+    ['Northern Mariana Islands', '2580', ['northern mariana islands', 'commonwealth of the northern mariana islands']],
+    ['Palau', '2585', ['palau', 'republic of palau']],
+    ['Palestine', '2275', ['palestine', 'palestine state of', 'the state of palestine', 'palestinian territories', 'state of palestine']],
+    ['Panama', '2591', ['panama', 'republic of panama']],
+    ['Papua New Guinea', '2598', ['papua new guinea', 'independent state of papua new guinea']],
+    ['Paraguay', '2600', ['paraguay', 'republic of paraguay']],
+    ['Pitcairn Islands', '2612', ['pitcairn islands', 'pitcairn']],
+    ['Puerto Rico', '2630', ['puerto rico']],
+    ['Republic of the Congo', '2178', ['republic of the congo', 'congo', 'congo brazzaville']],
+    ['Reunion', '2638', ['reunion', 'réunion']],
+    ['Russia', '2643', ['russia', 'russian federation']],
+    ['Rwanda', '2646', ['rwanda', 'rwandese republic']],
+    ['Saint Barthelemy', '2652', ['saint barthelemy', 'saint barthélemy', 'st barts', 'st barthelemy']],
+    ['Saint Helena, Ascension and Tristan da Cunha', '2654', ['saint helena ascension tristan da cunha', 'saint helena', 'st helena']],
+    ['Saint Kitts and Nevis', '2659', ['saint kitts nevis', 'st kitts nevis', 'st kitts']],
+    ['Saint Lucia', '2662', ['saint lucia', 'st lucia']],
+    ['Saint Martin', '2663', ['saint martin', 'saint martin french part', 'st martin']],
+    ['Saint Pierre and Miquelon', '2666', ['saint pierre miquelon', 'st pierre miquelon']],
+    ['Saint Vincent and the Grenadines', '2670', ['saint vincent the grenadines', 'st vincent the grenadines', 'st vincent']],
+    ['Samoa', '2882', ['samoa', 'independent state of samoa']],
+    ['San Marino', '2674', ['san marino', 'republic of san marino']],
+    ['Sao Tome and Principe', '2678', ['sao tome principe', 'democratic republic of sao tome principe']],
+    ['Senegal', '2686', ['senegal', 'republic of senegal']],
+    ['Seychelles', '2690', ['seychelles', 'republic of seychelles']],
+    ['Sierra Leone', '2694', ['sierra leone', 'republic of sierra leone']],
+    ['Sint Maarten', '2534', ['sint maarten', 'sint maarten dutch part']],
+    ['Solomon Islands', '2090', ['solomon islands']],
+    ['Somalia', '2706', ['somalia', 'federal republic of somalia']],
+    ['South Georgia and the South Sandwich Islands', '2239', ['south georgia the south sandwich islands']],
+    ['South Sudan', '2728', ['south sudan', 'republic of south sudan']],
+    ['Sudan', '2729', ['sudan', 'republic of the sudan']],
+    ['Suriname', '2740', ['suriname', 'republic of suriname']],
+    ['Svalbard and Jan Mayen', '2744', ['svalbard jan mayen']],
+    ['Syria', '2760', ['syria', 'syrian arab republic']],
+    ['Tajikistan', '2762', ['tajikistan', 'republic of tajikistan']],
+    ['Tanzania', '2834', ['tanzania', 'tanzania united republic of', 'united republic of tanzania']],
+    ['The Bahamas', '2044', ['the bahamas', 'bahamas', 'commonwealth of the bahamas']],
+    ['The Gambia', '2270', ['the gambia', 'gambia', 'republic of the gambia']],
+    ['Timor-Leste', '2626', ['timor leste', 'democratic republic of timor leste', 'east timor']],
+    ['Togo', '2768', ['togo', 'togolese republic']],
+    ['Tokelau', '2772', ['tokelau']],
+    ['Tonga', '2776', ['tonga', 'kingdom of tonga']],
+    ['Trinidad and Tobago', '2780', ['trinidad tobago', 'republic of trinidad tobago', 'trinidad']],
+    ['Tunisia', '2788', ['tunisia', 'republic of tunisia']],
+    ['Turkmenistan', '2795', ['turkmenistan']],
+    ['Turks and Caicos Islands', '2796', ['turks caicos islands']],
+    ['Tuvalu', '2798', ['tuvalu']],
+    ['U.S. Virgin Islands', '2850', ['u s virgin islands', 'virgin islands u s', 'virgin islands of the united states', 'us virgin islands']],
+    ['Uganda', '2800', ['uganda', 'republic of uganda']],
+    ['United States Minor Outlying Islands', '2581', ['united states minor outlying islands']],
+    ['Uruguay', '2858', ['uruguay', 'eastern republic of uruguay']],
+    ['Uzbekistan', '2860', ['uzbekistan', 'republic of uzbekistan']],
+    ['Vanuatu', '2548', ['vanuatu', 'republic of vanuatu']],
+    ['Vatican City', '2336', ['vatican city', 'holy see vatican city state', 'vatican', 'holy see']],
+    ['Venezuela', '2862', ['venezuela', 'venezuela bolivarian republic of', 'bolivarian republic of venezuela']],
+    ['Wallis and Futuna', '2876', ['wallis futuna']],
+    ['Western Sahara', '2732', ['western sahara']],
+    ['Yemen', '2887', ['yemen', 'republic of yemen']],
+    ['Zambia', '2894', ['zambia', 'republic of zambia']],
+    ['Zimbabwe', '2716', ['zimbabwe', 'republic of zimbabwe']]
   ];
   const US_STATES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming', DC: 'District of Columbia' };
   const CA_PROVINCES = { AB: 'Alberta', BC: 'British Columbia', MB: 'Manitoba', NB: 'New Brunswick', NL: 'Newfoundland and Labrador', NS: 'Nova Scotia', NT: 'Northwest Territories', NU: 'Nunavut', ON: 'Ontario', PE: 'Prince Edward Island', QC: 'Quebec', SK: 'Saskatchewan', YT: 'Yukon' };
@@ -396,7 +571,51 @@
     'riyadh': 'Saudi Arabia', 'jeddah': 'Saudi Arabia', 'dammam': 'Saudi Arabia', 'mecca': 'Saudi Arabia', 'makkah': 'Saudi Arabia', 'doha': 'Qatar', 'muscat': 'Oman', 'manama': 'Bahrain', 'kuwait city': 'Kuwait',
     'delhi': 'India', 'new delhi': 'India', 'mumbai': 'India', 'bangalore': 'India', 'bengaluru': 'India', 'hyderabad': 'India', 'chennai': 'India', 'kolkata': 'India', 'pune': 'India',
     'amritsar': 'India', 'ludhiana': 'India', 'chandigarh': 'India', 'jalandhar': 'India', 'ahmedabad': 'India', 'jaipur': 'India', 'kochi': 'India', 'mysuru': 'India', 'mysore': 'India',
-    'karachi': 'Pakistan', 'lahore': 'Pakistan', 'islamabad': 'Pakistan', 'rawalpindi': 'Pakistan', 'faisalabad': 'Pakistan', 'multan': 'Pakistan', 'peshawar': 'Pakistan', 'quetta': 'Pakistan', 'sialkot': 'Pakistan', 'gujranwala': 'Pakistan'
+    'karachi': 'Pakistan', 'lahore': 'Pakistan', 'islamabad': 'Pakistan', 'rawalpindi': 'Pakistan', 'faisalabad': 'Pakistan', 'multan': 'Pakistan', 'peshawar': 'Pakistan', 'quetta': 'Pakistan', 'sialkot': 'Pakistan', 'gujranwala': 'Pakistan',
+    'sukkur': 'Pakistan', 'bahawalpur': 'Pakistan', 'sargodha': 'Pakistan', 'abbottabad': 'Pakistan',
+    // big cities whose name is not shared with a big city elsewhere, so a bare name can take its country
+    'medina': 'Saudi Arabia', 'madinah': 'Saudi Arabia', 'al khobar': 'Saudi Arabia', 'khobar': 'Saudi Arabia', 'taif': 'Saudi Arabia',
+    'lucknow': 'India', 'surat': 'India', 'indore': 'India', 'bhopal': 'India', 'nagpur': 'India', 'noida': 'India', 'gurgaon': 'India', 'gurugram': 'India',
+    'thane': 'India', 'navi mumbai': 'India', 'coimbatore': 'India', 'visakhapatnam': 'India', 'vadodara': 'India', 'patna': 'India', 'kanpur': 'India', 'thiruvananthapuram': 'India',
+    'dhaka': 'Bangladesh', 'chittagong': 'Bangladesh', 'chattogram': 'Bangladesh', 'colombo': 'Sri Lanka', 'kandy': 'Sri Lanka', 'kathmandu': 'Nepal', 'pokhara': 'Nepal',
+    'leeds': 'United Kingdom', 'liverpool': 'United Kingdom', 'glasgow': 'United Kingdom', 'edinburgh': 'United Kingdom', 'bristol': 'United Kingdom', 'sheffield': 'United Kingdom',
+    'newcastle upon tyne': 'United Kingdom', 'nottingham': 'United Kingdom', 'leicester': 'United Kingdom', 'cardiff': 'United Kingdom', 'belfast': 'United Kingdom',
+    'southampton': 'United Kingdom', 'coventry': 'United Kingdom', 'bradford': 'United Kingdom', 'salford': 'United Kingdom', 'stockport': 'United Kingdom', 'brighton': 'United Kingdom', 'aberdeen': 'United Kingdom',
+    'dublin': 'Ireland', 'cork': 'Ireland', 'galway': 'Ireland',
+    'toronto': 'Canada', 'montreal': 'Canada', 'calgary': 'Canada', 'edmonton': 'Canada', 'ottawa': 'Canada', 'mississauga': 'Canada', 'brampton': 'Canada', 'winnipeg': 'Canada', 'quebec city': 'Canada', 'saskatoon': 'Canada', 'vancouver': 'Canada',
+    'sydney': 'Australia', 'melbourne': 'Australia', 'perth': 'Australia', 'brisbane': 'Australia', 'adelaide': 'Australia', 'canberra': 'Australia', 'gold coast': 'Australia', 'hobart': 'Australia',
+    'auckland': 'New Zealand', 'wellington': 'New Zealand', 'christchurch': 'New Zealand',
+    'kuala lumpur': 'Malaysia', 'johor bahru': 'Malaysia', 'jakarta': 'Indonesia', 'surabaya': 'Indonesia', 'bandung': 'Indonesia', 'manila': 'Philippines', 'quezon city': 'Philippines', 'makati': 'Philippines', 'cebu city': 'Philippines',
+    'bangkok': 'Thailand', 'phuket': 'Thailand', 'chiang mai': 'Thailand', 'hanoi': 'Vietnam', 'ho chi minh city': 'Vietnam', 'saigon': 'Vietnam',
+    'tokyo': 'Japan', 'osaka': 'Japan', 'yokohama': 'Japan', 'kyoto': 'Japan', 'seoul': 'South Korea', 'busan': 'South Korea', 'incheon': 'South Korea',
+    'beijing': 'China', 'shanghai': 'China', 'shenzhen': 'China', 'guangzhou': 'China',
+    'lagos': 'Nigeria', 'abuja': 'Nigeria', 'nairobi': 'Kenya', 'mombasa': 'Kenya', 'accra': 'Ghana', 'kumasi': 'Ghana', 'johannesburg': 'South Africa', 'cape town': 'South Africa', 'durban': 'South Africa', 'pretoria': 'South Africa',
+    'casablanca': 'Morocco', 'rabat': 'Morocco', 'marrakech': 'Morocco', 'tunis': 'Tunisia', 'algiers': 'Algeria', 'addis ababa': 'Ethiopia', 'kampala': 'Uganda', 'dar es salaam': 'Tanzania', 'kigali': 'Rwanda', 'cairo': 'Egypt', 'giza': 'Egypt',
+    'amman': 'Jordan', 'beirut': 'Lebanon', 'baghdad': 'Iraq', 'erbil': 'Iraq', 'tehran': 'Iran', 'istanbul': 'Turkey', 'ankara': 'Turkey', 'izmir': 'Turkey', 'tel aviv': 'Israel',
+    'paris': 'France', 'marseille': 'France', 'lyon': 'France', 'berlin': 'Germany', 'munich': 'Germany', 'hamburg': 'Germany', 'frankfurt': 'Germany', 'cologne': 'Germany',
+    'madrid': 'Spain', 'barcelona': 'Spain', 'seville': 'Spain', 'rome': 'Italy', 'milan': 'Italy', 'naples': 'Italy', 'turin': 'Italy',
+    'amsterdam': 'Netherlands', 'rotterdam': 'Netherlands', 'the hague': 'Netherlands', 'brussels': 'Belgium', 'antwerp': 'Belgium', 'vienna': 'Austria', 'zurich': 'Switzerland', 'geneva': 'Switzerland',
+    'lisbon': 'Portugal', 'porto': 'Portugal', 'stockholm': 'Sweden', 'oslo': 'Norway', 'copenhagen': 'Denmark', 'helsinki': 'Finland', 'warsaw': 'Poland', 'krakow': 'Poland',
+    'prague': 'Czechia', 'budapest': 'Hungary', 'bucharest': 'Romania', 'athens': 'Greece',
+    'mexico city': 'Mexico', 'guadalajara': 'Mexico', 'monterrey': 'Mexico', 'sao paulo': 'Brazil', 'rio de janeiro': 'Brazil', 'brasilia': 'Brazil', 'buenos aires': 'Argentina',
+    'bogota': 'Colombia', 'medellin': 'Colombia', 'lima': 'Peru', 'quito': 'Ecuador', 'caracas': 'Venezuela'
+  };
+  // First-level regions of every country (ISO 3166-2, plus common English names), by Google country ID.
+  // Used only to keep "Monterrey, Nuevo León, Mexico" or "Guadalajara, Jalisco" together as one place.
+  const WORLD_REGIONS_SRC = '2004:badakhshan|badghis|baghlan|balkh|bamyan|daykundi|farah|faryab|ghazni|ghor|helmand|herat|jowzjan|kabul|kandahar|kapisa|khost|kunar|kunduz|laghman|logar|nangarhar|nimroz|nuristan|paktika|paktiya|panjshayr|parwan|samangan|sar e pul|takhar|uruzgan|wardak|zabul;2008:berat|diber|durres|elbasan|fier|gjirokaster|korce|kukes|lezhe|shkoder|tirane|vlore;2012:adrar|ain defla|ain temouchent|alger|annaba|batna|bechar|bejaia|beni abbes|biskra|blida|bordj badji mokhtar|bordj bou arreridj|bouira|boumerdes|chlef|constantine|djanet|djelfa|el bayadh|el meghaier|el meniaa|el oued|el tarf|ghardaia|guelma|illizi|in guezzam|in salah|jijel|khenchela|laghouat|m sila|mascara|medea|mila|mostaganem|naama|oran|ouargla|ouled djellal|oum el bouaghi|relizane|saida|setif|sidi bel abbes|skikda|souk ahras|tamanrasset|tebessa|tiaret|timimoun|tindouf|tipaza|tissemsilt|tizi ouzou|tlemcen|touggourt;2024:bengo|benguela|bie|cabinda|cuando cubango|cuanza norte|cuanza sul|cunene|huambo|huila|luanda|lunda norte|lunda sul|malange|moxico|namibe|uige|zaire;2031:abseron|agcabədi|agdam|agdas|agstafa|agsu|astara|balakən|beyləqan|biləsuvar|bərdə|cəbrayıl|cəlilabad|daskəsən|fuzuli|goranboy|goycay|goygol|gədəbəy|hacıqabul|imisli|ismayıllı|kurdəmir|kəlbəcər|lacın|lerik|lənkəran|masallı|naxcıvan|neftcala|oguz|qax|qazax|qobustan|quba|qubadlı|qusar|qəbələ|saatlı|sabirabad|sabran|salyan|samaxı|samux|siyəzən|susa|səki|səmkir|tovuz|tərtər|ucar|xacmaz|xocalı|xocavənd|xızı|yardımlı|yevlax|zaqatala|zəngilan|zərdab;2032:buenos aires|catamarca|chaco|chubut|cordoba|corrientes|entre rios|formosa|jujuy|la pampa|la rioja|mendoza|misiones|neuquen|rio negro|salta|san juan|san luis|santa cruz|santa fe|santiago del estero|tierra del fuego|tucuman;2036:australian capital territory|new south wales|northern territory|queensland|south australia|tasmania|victoria|western australia;2040:burgenland|karnten|niederosterreich|oberosterreich|salzburg|steiermark|tirol|vorarlberg|wien;2044:acklins|berry islands|bimini|black point|cat island|central abaco|central andros|central eleuthera|city of freeport|crooked island long cay|east grand bahama|exuma|grand cay|harbour island|hope town|inagua|long island|mangrove cay|mayaguana|moore s island|new providence|north abaco|north andros|north eleuthera|ragged island|rum cay|san salvador|south abaco|south andros|south eleuthera|spanish wells|west grand bahama;2048:al asimah|al janubiyah|al muharraq|ash shamaliyah;2050:barishal|chattogram|dhaka|khulna|mymensingh|rajshahi|rangpur|sylhet;2051:aragacotn|ararat|armavir|gegark unik|kotayk|lori|sirak|syunik|tavus|vayoc jor;2056:bruxelles capitale region de|flanders|vlaams gewest|wallonia|wallonne region;2064:bumthang|chhukha|dagana|gasa|haa|lhuentse|monggar|paro|pema gatshel|punakha|samdrup jongkhar|samtse|sarpang|thimphu|trashi yangtse|trashigang|trongsa|tsirang|wangdue phodrang|zhemgang;2068:chuquisaca|cochabamba|el beni|la paz|oruro|pando|potosi|santa cruz|tarija;2070:federacija bosne i hercegovine|republika srpska;2072:central|chobe|ghanzi|jwaneng|kgalagadi|kgatleng|kweneng|lobatse|north east|north west|selibe phikwe|south east|southern|sowa town;2076:acre|alagoas|amapa|amazonas|bahia|ceara|distrito federal|espirito santo|goias|maranhao|mato grosso|mato grosso do sul|minas gerais|para|paraiba|parana|pernambuco|piaui|rio de janeiro|rio grande do norte|rio grande do sul|rondonia|roraima|santa catarina|sao paulo|sergipe|tocantins;2084:cayo|corozal|orange walk|stann creek|toledo;2090:central|choiseul|guadalcanal|isabel|makira ulawa|malaita|rennell bellona|temotu|western;2096:belait|brunei muara|temburong|tutong;2100:blagoevgrad|burgas|dobrich|gabrovo|haskovo|kardzhali|kyustendil|lovech|montana|pazardzhik|pernik|pleven|plovdiv|razgrad|ruse|shumen|silistra|sliven|smolyan|sofia|sofia stolitsa|stara zagora|targovishte|varna|veliko tarnovo|vidin|vratsa|yambol;2104:ayeyarwady|bago|chin|kachin|kayah|kayin|magway|mandalay|mon|nay pyi taw|rakhine|sagaing|shan|tanintharyi|yangon;2108:bubanza|bujumbura mairie|bujumbura rural|bururi|cankuzo|cibitoke|gitega|karuzi|kayanza|kirundo|makamba|muramvya|muyinga|mwaro|ngozi|rumonge|rutana|ruyigi;2112:bresckaja voblasc|homielskaja voblasc|hrodzienskaja voblasc|mahiliouskaja voblasc|minskaja voblasc|viciebskaja voblasc;2116:baat dambang|banteay mean choay|kaeb|kampong chaam|kampong chhnang|kampong spueu|kampong thum|kampot|kandaal|kaoh kong|kracheh|mondol kiri|otdar mean chey|pailin|pousaat|preah sihanouk|preah vihear|prey veaeng|rotanak kiri|siem reab|stueng traeng|svaay rieng|taakaev|tbong khmum;2120:adamaoua|centre|east|far north|littoral|north|north west|south|south west|west;2124:alberta|british columbia|manitoba|new brunswick|newfoundland labrador|northwest territories|nova scotia|nunavut|ontario|prince edward island|quebec|saskatchewan|yukon;2140:bamingui bangoran|bangui|basse kotto|gribingui|haut mbomou|haute kotto|haute sangha|haute sangha mambere kadei|kemo gribingui|lobaye|mambere kadei|mbomou|nana mambere|ombella mpoko|ouaka|ouham|ouham pende|sangha|vakaga;2144:central province|eastern province|north central province|north western province|northern province|sabaragamuwa province|southern province|uva province|western province;2148:bahr el ghazal|batha|borkou|chari baguirmi|ennedi est|ennedi ouest|guera|hadjer lamis|kanem|lac|logone occidental|logone oriental|mandoul|mayo kebbi est|mayo kebbi ouest|moyen chari|ouaddai|salamat|sila|tandjile|tibesti|ville de ndjamena|wadi fira;2152:aisen del general carlos ibanez del campo|antofagasta|arica y parinacota|atacama|biobio|coquimbo|la araucania|libertador general bernardo o higgins|los lagos|los rios|magallanes|maule|nuble|region metropolitana de santiago|tarapaca|valparaiso;2156:anhui sheng|fujian sheng|gansu sheng|guangdong sheng|guangxi zhuangzu zizhiqu|guizhou sheng|hainan sheng|hebei sheng|heilongjiang sheng|henan sheng|hubei sheng|hunan sheng|jiangsu sheng|jiangxi sheng|jilin sheng|liaoning sheng|nei mongol zizhiqu|ningxia huizu zizhiqu|qinghai sheng|shaanxi sheng|shandong sheng|shanxi sheng|sichuan sheng|taiwan sheng|xinjiang uygur zizhiqu|xizang zizhiqu|yunnan sheng|zhejiang sheng;2158:changhua|chiayi|hsinchu|hualien|kinmen|lienchiang|miaoli|nantou|penghu|pingtung|taitung|yilan|yunlin;2170:amazonas|antioquia|arauca|atlantico|bolivar|boyaca|caldas|caqueta|casanare|cauca|cesar|choco|cordoba|cundinamarca|guainia|guaviare|huila|la guajira|magdalena|meta|narino|norte de santander|putumayo|quindio|risaralda|san andres providencia y santa catalina|santander|sucre|tolima|valle del cauca|vaupes|vichada;2174:anjouan|grande comore|moheli;2178:bouenza|brazzaville|cuvette|cuvette ouest|kouilou|lekoumou|likouala|niari|plateaux|pointe noire|pool|sangha;2180:bas uele|equateur|haut katanga|haut lomami|haut uele|ituri|kasai|kasai central|kasai oriental|kongo central|kwango|kwilu|lomami|lualaba|mai ndombe|maniema|mongala|nord kivu|nord ubangi|sankuru|sud kivu|sud ubangi|tanganyika|tshopo|tshuapa;2188:alajuela|cartago|guanacaste|heredia|limon|puntarenas|san jose;2191:bjelovarsko bilogorska zupanija|brodsko posavska zupanija|dubrovacko neretvanska zupanija|istarska zupanija|karlovacka zupanija|koprivnicko krizevacka zupanija|krapinsko zagorska zupanija|licko senjska zupanija|međimurska zupanija|osjecko baranjska zupanija|pozesko slavonska zupanija|primorsko goranska zupanija|sibensko kninska zupanija|sisacko moslavacka zupanija|splitsko dalmatinska zupanija|varazdinska zupanija|viroviticko podravska zupanija|vukovarsko srijemska zupanija|zadarska zupanija|zagrebacka zupanija;2192:artemisa|camaguey|ciego de avila|cienfuegos|granma|guantanamo|holguin|la habana|las tunas|matanzas|mayabeque|pinar del rio|sancti spiritus|santiago de cuba|villa clara;2196:ammochostos|keryneia|larnaka|lefkosia|lemesos|pafos;2203:jihocesky kraj|jihomoravsky kraj|karlovarsky kraj|kraj vysocina|kralovehradecky kraj|liberecky kraj|moravskoslezsky kraj|olomoucky kraj|pardubicky kraj|plzensky kraj|stredocesky kraj|ustecky kraj|zlinsky kraj;2204:alibori|atacora|atlantique|borgou|collines|couffo|donga|littoral|mono|oueme|plateau|zou;2208:hovedstaden|midtjylland|nordjylland|sjælland|syddanmark;2214:cibao nordeste|cibao noroeste|cibao norte|cibao sur|el valle|enriquillo|higuamo|ozama|valdesia|yuma;2218:azuay|bolivar|canar|carchi|chimborazo|cotopaxi|el oro|esmeraldas|galapagos|guayas|imbabura|loja|los rios|manabi|morona santiago|napo|orellana|pastaza|pichincha|santa elena|santo domingo de los tsachilas|sucumbios|tungurahua|zamora chinchipe;2222:ahuachapan|cabanas|chalatenango|cuscatlan|la libertad|la paz|la union|morazan|san miguel|san salvador|san vicente|santa ana|sonsonate|usulutan;2226:region continentale|region insulaire;2231:addis ababa|afar|amara|benshangul gumaz|dire dawa|gambela peoples|harari people|oromia|sidama|somali|southern nations nationalities peoples|southwest ethiopia peoples|tigrai;2232:al awsat|al janubi|ansaba|janubi al bahri al ahmar|qash barkah|shimali al bahri al ahmar;2233:harjumaa|hiiumaa|ida virumaa|jarvamaa|jogevamaa|laane virumaa|laanemaa|parnumaa|polvamaa|raplamaa|saaremaa|tartumaa|valgamaa|viljandimaa|vorumaa;2242:central|eastern|northern|western;2246:etela karjala|etela pohjanmaa|etela savo|kainuu|kanta hame|keski pohjanmaa|keski suomi|kymenlaakso|landskapet aland|lappi|paijat hame|pirkanmaa|pohjanmaa|pohjois karjala|pohjois pohjanmaa|pohjois savo|satakunta|uusimaa|varsinais suomi;2250:brittany|burgundy franche comte|corsica|normandy;2262:ali sabieh|arta|dikhil|obock|tadjourah;2266:estuaire|haut ogooue|moyen ogooue|ngounie|nyanga|ogooue ivindo|ogooue lolo|ogooue maritime|woleu ntem;2268:abkhazia|ajaria|guria|imereti|k akheti|kvemo kartli|mtskheta mtianeti|rach a lechkhumi kvemo svaneti|samegrelo zemo svaneti|samtskhe javakheti|shida kartli;2270:central river|lower river|north bank|upper river|western;2275:bethlehem|deir el balah|gaza|hebron|jenin|jericho al aghwar|jerusalem|khan yunis|nablus|north gaza|qalqilya|rafah|ramallah|salfit|tubas|tulkarm;2276:baden wurttemberg|bavaria|bayern|berlin|brandenburg|bremen|hamburg|hesse|hessen|lower saxony|mecklenburg vorpommern|mecklenburg western pomerania|niedersachsen|nordrhein westfalen|north rhine westphalia|rheinland pfalz|rhineland palatinate|saarland|sachsen|sachsen anhalt|saxony|saxony anhalt|schleswig holstein|thuringen|thuringia;2288:ahafo|ashanti|bono|bono east|central|eastern|greater accra|north east|northern|oti|savannah|upper east|upper west|volta|western|western north;2296:gilbert islands|line islands|phoenix islands;2300:agion oros|anatoliki makedonia kai thraki|attiki|dytiki ellada|dytiki makedonia|ionia nisia|ipeiros|kentriki makedonia|kriti|notio aigaio|peloponnisos|sterea ellada|thessalia|voreio aigaio;2320:alta verapaz|baja verapaz|chimaltenango|chiquimula|el progreso|escuintla|huehuetenango|izabal|jalapa|jutiapa|peten|quetzaltenango|quiche|retalhuleu|sacatepequez|san marcos|santa rosa|solola|suchitepequez|totonicapan|zacapa;2324:boke|conakry|faranah|kankan|kindia|labe|mamou|nzerekore;2328:barima waini|cuyuni mazaruni|demerara mahaica|east berbice corentyne|essequibo islands west demerara|mahaica berbice|pomeroon supenaam|potaro siparuni|upper demerara berbice|upper takutu upper essequibo;2332:artibonite|centre|grande anse|nippes|nord|nord est|nord ouest|ouest|sud|sud est;2340:atlantida|choluteca|colon|comayagua|copan|cortes|el paraiso|francisco morazan|gracias a dios|intibuca|islas de la bahia|la paz|lempira|ocotepeque|olancho|santa barbara|valle|yoro;2348:bacs kiskun|baranya|bekes|borsod abauj zemplen|csongrad csanad|fejer|gyor moson sopron|hajdu bihar|heves|jasz nagykun szolnok|komarom esztergom|nograd|pest|somogy|szabolcs szatmar bereg|tolna|vas|veszprem|zala;2352:austurland|hofuðborgarsvæði|norðurland eystra|norðurland vestra|suðurland|suðurnes|vestfirðir|vesturland;2356:andaman nicobar islands|andhra pradesh|arunachal pradesh|assam|bihar|chandigarh|chhattisgarh|dadra nagar haveli daman diu|delhi|goa|gujarat|haryana|himachal pradesh|jammu kashmir|jharkhand|karnataka|kerala|ladakh|lakshadweep|madhya pradesh|maharashtra|manipur|meghalaya|mizoram|nagaland|odisha|puducherry|punjab|rajasthan|sikkim|tamil nadu|telangana|tripura|uttar pradesh|uttarakhand|west bengal;2364:alborz|ardabil|azarbayjan e gharbi|azarbayjan e sharqi|bushehr|chahar mahal va bakhtiari|esfahan|fars|gilan|golestan|hamadan|hormozgan|ilam|kerman|kermanshah|khorasan e jonubi|khorasan e razavi|khorasan e shomali|khuzestan|kohgiluyeh va bowyer ahmad|kordestan|lorestan|markazi|mazandaran|qazvin|qom|semnan|sistan va baluchestan|tehran|yazd|zanjan;2368:al anbar|al basrah|al muthanna|al qadisiyah|an najaf|babil|baghdad|dhi qar|diyala|iqlim kurdistan|karbala|kirkuk|maysan|ninawa|salah ad din|wasit;2372:connaught|leinster|munster|ulster;2376:al awsat|al janubi|al quds|ash shamali|hayfa|tall abib;2380:abruzzo|aosta valley|apulia|basilicata|calabria|campania|emilia romagna|friuli venezia giulia|lazio|liguria|lombardia|lombardy|marche|molise|piedmont|piemonte|puglia|sardegna|sardinia|sicilia|sicily|toscana|trentino alto adige|trentino south tyrol|tuscany|umbria|valle d aosta|veneto;2384:abidjan|bas sassandra|comoe|denguele|goh djiboua|lacs|lagunes|montagnes|sassandra marahoue|savanes|vallee du bandama|woroba|yamoussoukro|zanzan;2392:aichi|akita|aomori|chiba|ehime|fukui|fukuoka|fukushima|gifu|gunma|hiroshima|hokkaido|hyogo|ibaraki|ishikawa|iwate|kagawa|kagoshima|kanagawa|kochi|kumamoto|kyoto|mie|miyagi|miyazaki|nagano|nagasaki|nara|niigata|oita|okayama|okinawa|osaka|saga|saitama|shiga|shimane|shizuoka|tochigi|tokushima|tokyo|tottori|toyama|wakayama|yamagata|yamaguchi|yamanashi;2398:abay oblysy|almaty oblysy|aqmola oblysy|aqtobe oblysy|atyrau oblysy|batys qazaqstan oblysy|mangghystau oblysy|pavlodar oblysy|qaraghandy oblysy|qostanay oblysy|qyzylorda oblysy|shyghys qazaqstan oblysy|soltustik qazaqstan oblysy|turkistan oblysy|ulytau oblysy|zhambyl oblysy|zhetisu oblysy;2400:ajlun|al aqabah|al asimah|al balqa|al karak|al mafraq|at tafilah|az zarqa|irbid|jarash|ma an|madaba;2404:baringo|bomet|bungoma|busia|elgeyo|elgeyo marakwet|embu|garissa|homa bay|isiolo|kajiado|kakamega|kericho|kiambu|kilifi|kirinyaga|kisii|kisumu|kitui|kwale|laikipia|lamu|machakos|makueni|mandera|marakwet|marsabit|meru|migori|mombasa|murang a|nairobi city|nakuru|nandi|narok|nyamira|nyandarua|nyeri|samburu|siaya|taita|taita taveta|tana river|taveta|tharaka nithi|trans nzoia|turkana|uasin gishu|vihiga|wajir|west pokot;2408:hamkyeongnamto|hamkyeongpukto|hwanghainamto|hwanghaipukto|jakangto|kangweonto|phyeongannamto|phyeonganpukto|ryangkangto;2410:chungcheongbuk do|chungcheongnam do|gyeonggi do|gyeongsangbuk do|gyeongsangnam do|jeollabuk do|jeollanam do;2414:al ahmadi|al asimah|al farwaniyah|al jahra|hawalli|mubarak al kabir;2417:batken|chuy|jalal abad|naryn|osh|talas|ysyk kol;2418:attapu|bokeo|bolikhamxai|champasak|houaphan|khammouan|louang namtha|louangphabang|oudomxai|phongsali|salavan|savannakhet|viangchan|xaignabouli|xaisomboun|xekong|xiangkhouang;2422:akkar|al biqa|al janub|an nabatiyah|ash shimal|b alabak al hirmil|bayrut|jabal lubnan;2426:berea|botha bothe|leribe|mafeteng|maseru|mohale s hoek|mokhotlong|qacha s nek|quthing|thaba tseka;2430:bomi|bong|gbarpolu|grand bassa|grand cape mount|grand gedeh|grand kru|lofa|margibi|maryland|montserrado|nimba|river cess|river gee|sinoe;2434:al butnan|al jabal al akhdar|al jabal al gharbi|al jafarah|al jufrah|al kufrah|al marj|al marqab|al wahat|an nuqat al khams|az zawiyah|banghazi|darnah|ghat|misratah|murzuq|nalut|sabha|surt|tarabulus|wadi al hayat|wadi ash shati;2438:balzers|eschen|gamprin|mauren|planken|ruggell|schaan|schellenberg|triesen|triesenberg|vaduz;2440:alytaus apskritis|kauno apskritis|klaipedos apskritis|marijampoles apskritis|panevezio apskritis|siauliu apskritis|taurages apskritis|telsiu apskritis|utenos apskritis|vilniaus apskritis;2442:capellen|clervaux|diekirch|echternach|esch sur alzette|grevenmacher|mersch|redange|remich|vianden|wiltz;2450:antananarivo|antsiranana|fianarantsoa|mahajanga|toamasina|toliara;2454:central region|northern region|southern region;2458:johor|kedah|kelantan|melaka|negeri sembilan|pahang|perak|perlis|pulau pinang|sabah|sarawak|selangor|terengganu|wilayah persekutuan kuala lumpur|wilayah persekutuan labuan|wilayah persekutuan putrajaya;2462:faadhippolhu|felidhu atoll|fuvammulah|hahdhunmathi|kolhumadulu|male atoll|mulaku atoll|north ari atoll|north huvadhu atoll|north maalhosmadulu|north miladhunmadulu|north nilandhe atoll|north thiladhunmathi|south ari atoll|south huvadhu atoll|south maalhosmadulu|south miladhunmadulu|south nilandhe atoll|south thiladhunmathi;2466:bamako|gao|kayes|kidal|koulikoro|menaka|mopti|segou|sikasso|taoudenit|tombouctou;2470:attard|balzan|birgu|birkirkara|birzebbuga|bormla|dingli|fgura|floriana|fontana|gudja|gzira|għajnsielem|għarb|għargħur|għasri|għaxaq|iklin|isla|kalkara|kercem|kirkop|lija|luqa|marsa|marsaskala|marsaxlokk|mdina|mellieħa|mgarr|mosta|mqabba|msida|mtarfa|munxar|nadur|naxxar|paola|pembroke|pieta|qala|qormi|qrendi|rabat gozo|rabat malta|safi|saint john|saint julian s|saint lawrence|saint lucia s|saint paul s bay|sannat|santa venera|siggiewi|sliema|swieqi|ta xbiex|tarxien|valletta|xagħra|xewkija|xgħajra|zabbar|zebbug gozo|zebbug malta|zejtun|zurrieq|ħamrun;2478:adrar|assaba|brakna|dakhlet nouadhibou|gorgol|guidimaka|hodh ech chargui|hodh el gharbi|inchiri|nouakchott nord|nouakchott ouest|nouakchott sud|tagant|tiris zemmour|trarza;2480:black river|flacq|grand port|moka|pamplemousses|plaines wilhems|port louis|riviere du rempart|savanne;2484:aguascalientes|baja california|baja california sur|campeche|chiapas|chihuahua|ciudad de mexico|coahuila de zaragoza|colima|durango|guanajuato|guerrero|hidalgo|jalisco|michoacan de ocampo|morelos|nayarit|nuevo leon|oaxaca|puebla|queretaro|quintana roo|san luis potosi|sinaloa|sonora|tabasco|tamaulipas|tlaxcala|veracruz de ignacio de la llave|yucatan|zacatecas;2492:fontvieille|jardin exotique|la colle|la condamine|la gare|la source|larvotto|malbousquet|monaco ville|moneghetti|monte carlo|moulins|port hercule|saint roman|sainte devote|spelugues|vallon de la rousse;2496:arhangay|bayan olgiy|bayanhongor|bulgan|darhan uul|dornod|dornogovi|dundgovi|dzavhan|govi altay|govi sumber|hentiy|hovd|hovsgol|omnogovi|orhon|ovorhangay|selenge|suhbaatar|tov|uvs;2498:anenii noi|basarabeasca|briceni|cahul|calarasi|cantemir|causeni|cimislia|criuleni|donduseni|drochia|dubasari|edinet|falesti|floresti|gagauzia unitatea teritoriala autonoma utag|glodeni|hincesti|ialoveni|leova|nisporeni|ocnita|orhei|rezina|riscani|singerei|soldanesti|soroca|stefan voda|stinga nistrului unitatea teritoriala din|straseni|taraclia|telenesti|ungheni;2504:beni mellal khenifra|casablanca settat|dakhla oued ed dahab eh|draa tafilalet|fes meknes|guelmim oued noun eh partial|l oriental|laayoune sakia el hamra eh partial|marrakech safi|rabat sale kenitra|souss massa|tanger tetouan al hoceima;2508:cabo delgado|gaza|inhambane|manica|maputo|nampula|niassa|sofala|tete|zambezia;2512:ad dakhiliyah|al buraymi|al wusta|az zahirah|janub al batinah|janub ash sharqiyah|masqat|musandam|shamal al batinah|shamal ash sharqiyah|zufar;2516:erongo|hardap|karas|kavango east|kavango west|khomas|kunene|ohangwena|omaheke|omusati|oshana|oshikoto|otjozondjupa|zambezi;2520:aiwo|anabar|anetan|anibare|baitsi|boe|buada|denigomodu|ewa|ijuw|meneng|nibok|uaboe|yaren;2524:bagmati|gandaki|karnali|koshi|lumbini|madhesh|sudurpashchim;2528:drenthe|flevoland|fryslan|gelderland|groningen|limburg|noord brabant|noord holland|overijssel|sint maarten|utrecht|zeeland|zuid holland;2548:malampa|penama|sanma|shefa|tafea|torba;2554:auckland|bay of plenty|canterbury|gisborne|greater wellington|hawke s bay|manawatu whanganui|marlborough|nelson|northland|otago|southland|taranaki|tasman|waikato|west coast;2558:boaco|carazo|chinandega|chontales|costa caribe norte|costa caribe sur|esteli|granada|jinotega|leon|madriz|managua|masaya|matagalpa|nueva segovia|rio san juan|rivas;2562:agadez|diffa|dosso|maradi|niamey|tahoua|tillaberi|zinder;2566:abia|adamawa|akwa ibom|anambra|bauchi|bayelsa|benue|borno|cross river|delta|ebonyi|edo|ekiti|enugu|gombe|imo|jigawa|kaduna|kano|katsina|kebbi|kogi|kwara|lagos|nasarawa|ogun|ondo|osun|oyo|plateau|rivers|sokoto|taraba|yobe|zamfara;2578:agder|innlandet|møre og romsdal|nordland|oslo|rogaland|troms og finnmark|trøndelag|vestfold og telemark|vestland|viken;2581:baker island|howland island|jarvis island|johnston atoll|kingman reef|midway islands|navassa island|palmyra atoll|wake island;2583:chuuk|kosrae|pohnpei|yap;2584:ralik chain|ratak chain;2585:aimeliik|airai|angaur|hatohobei|kayangel|koror|melekeok|ngaraard|ngarchelong|ngardmau|ngatpang|ngchesar|ngeremlengui|ngiwal|peleliu|sonsorol;2586:azad jammu kashmir|azad kashmir|balochistan|gilgit baltistan|khyber pakhtunkhwa|kpk|punjab|sindh;2591:bocas del toro|chiriqui|cocle|colon|darien|embera|guna yala|herrera|los santos|naso tjer di|ngabe bugle|panama oeste|veraguas;2598:bougainville|central|chimbu|east new britain|east sepik|eastern highlands|enga|gulf|hela|jiwaka|madang|manus|milne bay|morobe|national capital district port moresby|new ireland|northern|southern highlands|west new britain|west sepik|western|western highlands;2600:alto paraguay|alto parana|amambay|boqueron|caaguazu|caazapa|canindeyu|central|concepcion|cordillera|guaira|itapua|misiones|neembucu|paraguari|presidente hayes|san pedro;2604:amazonas|ancash|apurimac|arequipa|ayacucho|cajamarca|cusco|el callao|huancavelica|huanuco|ica|junin|la libertad|lambayeque|lima|loreto|madre de dios|moquegua|pasco|piura|puno|san martin|tacna|tumbes|ucayali;2608:autonomous region in muslim mindanao armm|bicol region v|cagayan valley region ii|calabarzon region iv a|caraga region xiii|central luzon region iii|central visayas region vii|cordillera administrative region car|davao region xi|eastern visayas region viii|ilocos region i|mimaropa region iv b|national capital region|northern mindanao region x|soccsksargen region xii|western visayas region vi|zamboanga peninsula region ix;2616:dolnoslaskie|kujawsko pomorskie|lubelskie|lubuskie|mazowieckie|małopolskie|opolskie|podkarpackie|podlaskie|pomorskie|slaskie|swietokrzyskie|warminsko mazurskie|wielkopolskie|zachodniopomorskie|łodzkie;2620:aveiro|beja|braga|braganca|castelo branco|coimbra|evora|faro|guarda|leiria|lisboa|portalegre|porto|regiao autonoma da madeira|regiao autonoma dos acores|santarem|setubal|viana do castelo|vila real|viseu;2624:bissau|leste|norte|sul;2642:alba|arad|arges|bacau|bihor|bistrita nasaud|botosani|braila|brasov|buzau|calarasi|caras severin|cluj|constanta|covasna|dambovita|dolj|galati|giurgiu|gorj|harghita|hunedoara|ialomita|iasi|ilfov|maramures|mehedinti|mures|neamt|olt|prahova|salaj|satu mare|sibiu|suceava|teleorman|timis|tulcea|valcea|vaslui|vrancea;2643:adygeya respublika|altay respublika|altayskiy kray|amurskaya oblast|arkhangel skaya oblast|astrakhanskaya oblast|bashkortostan respublika|belgorodskaya oblast|bryanskaya oblast|buryatiya respublika|chechenskaya respublika|chelyabinskaya oblast|chukotskiy avtonomnyy okrug|chuvashskaya respublika|dagestan respublika|ingushetiya respublika|irkutskaya oblast|ivanovskaya oblast|kabardino balkarskaya respublika|kaliningradskaya oblast|kalmykiya respublika|kaluzhskaya oblast|kamchatskiy kray|karachayevo cherkesskaya respublika|kareliya respublika|kemerovskaya oblast|khabarovskiy kray|khakasiya respublika|khanty mansiyskiy avtonomnyy okrug|kirovskaya oblast|komi respublika|kostromskaya oblast|krasnodarskiy kray|krasnoyarskiy kray|kurganskaya oblast|kurskaya oblast|leningradskaya oblast|lipetskaya oblast|magadanskaya oblast|mariy el respublika|mordoviya respublika|moskovskaya oblast|murmanskaya oblast|nenetskiy avtonomnyy okrug|nizhegorodskaya oblast|novgorodskaya oblast|novosibirskaya oblast|omskaya oblast|orenburgskaya oblast|orlovskaya oblast|penzenskaya oblast|permskiy kray|primorskiy kray|pskovskaya oblast|rostovskaya oblast|ryazanskaya oblast|saha respublika|sakhalinskaya oblast|samarskaya oblast|saratovskaya oblast|severnaya osetiya respublika|smolenskaya oblast|stavropol skiy kray|sverdlovskaya oblast|tambovskaya oblast|tatarstan respublika|tomskaya oblast|tul skaya oblast|tverskaya oblast|tyumenskaya oblast|tyva respublika|udmurtskaya respublika|ul yanovskaya oblast|vladimirskaya oblast|volgogradskaya oblast|vologodskaya oblast|voronezhskaya oblast|yamalo nenetskiy avtonomnyy okrug|yaroslavskaya oblast|yevreyskaya avtonomnaya oblast|zabaykal skiy kray;2646:eastern|northern|southern|western;2659:nevis|saint kitts;2662:anse la raye|canaries|castries|choiseul|dennery|gros islet|laborie|micoud|soufriere|vieux fort;2678:agua grande|cantagalo|caue|lemba|lobata|me zochi|principe;2682:al bahah|al hudud ash shamaliyah|al jawf|al jouf|al madinah al munawwarah|al qasim|ar riyad|ash sharqiyah|asir|eastern province|ha il|hail|jazan|madinah province|makkah al mukarramah|makkah province|makkah region|mecca province|medina province|najran|qassim|riyadh province|riyadh region|tabuk;2686:dakar|diourbel|fatick|kaffrine|kaolack|kedougou|kolda|louga|matam|saint louis|sedhiou|tambacounda|thies|ziguinchor;2688:borski okrug|branicevski okrug|jablanicki okrug|kolubarski okrug|kosovo metohija|macvanski okrug|moravicki okrug|nisavski okrug|pcinjski okrug|pirotski okrug|podunavski okrug|pomoravski okrug|rasinski okrug|raski okrug|sumadijski okrug|toplicki okrug|vojvodina|zajecarski okrug|zlatiborski okrug;2690:anse aux pins|anse boileau|anse etoile|anse royale|au cap|baie lazare|baie sainte anne|beau vallon|bel air|bel ombre|cascade|english river|glacis|grand anse mahe|grand anse praslin|ile perseverance i|ile perseverance ii|la digue|les mamelles|mont buxton|mont fleuri|plaisance|pointe larue|port glaud|roche caiman|saint louis|takamaka;2694:eastern|north western|northern|southern|western area freetown;2702:central singapore|north east|north west|south east|south west;2703:banskobystricky kraj|bratislavsky kraj|kosicky kraj|nitriansky kraj|presovsky kraj|trenciansky kraj|trnavsky kraj|zilinsky kraj;2704:an giang|ba ria vung tau|bac giang|bac kan|bac lieu|bac ninh|ben tre|binh duong|binh phuoc|binh thuan|binh đinh|ca mau|cao bang|gia lai|ha giang|ha nam|ha tinh|hai duong|hau giang|hoa binh|hung yen|khanh hoa|kien giang|kon tum|lai chau|lam đong|lang son|lao cai|long an|nam đinh|nghe an|ninh binh|ninh thuan|phu tho|phu yen|quang binh|quang nam|quang ngai|quang ninh|quang tri|soc trang|son la|tay ninh|thai binh|thai nguyen|thanh hoa|thua thien hue|tien giang|tra vinh|tuyen quang|vinh long|vinh phuc|yen bai|đak lak|đak nong|đien bien|đong nai|đong thap;2706:awdal|bakool|banaadir|bari|bay|galguduud|gedo|hiiraan|jubbada dhexe|jubbada hoose|mudug|nugaal|sanaag|shabeellaha dhexe|shabeellaha hoose|sool|togdheer|woqooyi galbeed;2710:eastern cape|free state|gauteng|kwazulu natal|limpopo|mpumalanga|north west|northern cape|western cape;2716:bulawayo|harare|manicaland|mashonaland central|mashonaland east|mashonaland west|masvingo|matabeleland north|matabeleland south|midlands;2724:andalucia|andalusia|aragon|asturias principado de|balearic islands|basque country|canarias|canary islands|cantabria|castile leon|castilla la mancha|castilla y leon|catalonia|cataluna|catalunya|catalunya cataluna|community of madrid|extremadura|galicia|galicia galicia|illes balears|illes balears islas baleares|islas baleares|la rioja|madrid comunidad de|murcia region de|navarra comunidad foral de|pais vasco|region of murcia|valencian community|valenciana comunidad;2728:central equatoria|eastern equatoria|jonglei|lakes|northern bahr el ghazal|unity|upper nile|warrap|western bahr el ghazal|western equatoria;2729:blue nile|central darfur|east darfur|gedaref|gezira|kassala|khartoum|north darfur|north kordofan|northern|red sea|river nile|sennar|south darfur|south kordofan|west darfur|west kordofan|white nile;2740:brokopondo|commewijne|coronie|marowijne|nickerie|para|paramaribo|saramacca|sipaliwini|wanica;2748:hhohho|lubombo|manzini|shiselweni;2752:blekinge lan|blekinge lan se 10|dalarnas lan|dalarnas lan se 20|gavleborgs lan|gavleborgs lan se 21|gotlands lan|gotlands lan se 09|hallands lan|hallands lan se 13|jamtlands lan|jamtlands lan se 23|jonkopings lan|jonkopings lan se 06|kalmar lan|kalmar lan se 08|kronobergs lan|kronobergs lan se 07|norrbottens lan|norrbottens lan se 25|orebro lan|orebro lan se 18|ostergotlands lan|ostergotlands lan se 05|se 01|se 03|se 04|se 05|se 06|se 07|se 08|se 09|se 10|se 12|se 13|se 14|se 17|se 18|se 19|se 20|se 21|se 22|se 23|se 24|se 25|skane lan|skane lan se 12|sodermanlands lan|sodermanlands lan se 04|stockholms lan|stockholms lan se 01|uppsala lan|uppsala lan se 03|varmlands lan|varmlands lan se 17|vasterbottens lan|vasterbottens lan se 24|vasternorrlands lan|vasternorrlands lan se 22|vastmanlands lan|vastmanlands lan se 19|vastra gotalands lan|vastra gotalands lan se 14;2756:aargau|appenzell ausserrhoden|appenzell innerrhoden|basel landschaft|basel stadt|bern|berne|fribourg|geneva|geneve|glarus|graubunden|jura|luzern|neuchatel|nidwalden|obwalden|sankt gallen|schaffhausen|schwyz|solothurn|thurgau|ticino|uri|valais|vaud|zug|zurich;2760:al hasakah|al ladhiqiyah|al qunaytirah|ar raqqah|as suwayda|dar a|dayr az zawr|dimashq|halab|hamah|hims|idlib|rif dimashq|tartus;2762:khatlon|kuhistoni badakhshon|nohiyahoi tobei jumhuri|sughd;2764:amnat charoen|ang thong|bueng kan|buri ram|chachoengsao|chai nat|chaiyaphum|chanthaburi|chiang mai|chiang rai|chon buri|chumphon|kalasin|kamphaeng phet|kanchanaburi|khon kaen|krabi|lampang|lamphun|loei|lop buri|mae hong son|maha sarakham|mukdahan|nakhon nayok|nakhon pathom|nakhon phanom|nakhon ratchasima|nakhon sawan|nakhon si thammarat|nan|narathiwat|nong bua lam phu|nong khai|nonthaburi|pathum thani|pattani|phangnga|phatthalung|phayao|phetchabun|phetchaburi|phichit|phitsanulok|phra nakhon si ayutthaya|phrae|phuket|prachin buri|prachuap khiri khan|ranong|ratchaburi|rayong|roi et|sa kaeo|sakon nakhon|samut prakan|samut sakhon|samut songkhram|saraburi|satun|si sa ket|sing buri|songkhla|sukhothai|suphan buri|surat thani|surin|tak|trang|trat|ubon ratchathani|udon thani|uthai thani|uttaradit|yala|yasothon;2768:centrale|kara|maritime region|plateaux|savanes;2776:eua|ha apai|niuas|tongatapu|vava u;2780:arima|chaguanas|couva tabaquite talparo|diego martin|mayaro rio claro|penal debe|point fortin|princes town|san juan laventille|sangre grande|siparia|tobago|tunapuna piarco;2784:abu dhabi|abu zaby|ajman|al fujayrah|ash shariqah|dubai|dubayy|fujairah|ra s al khaymah|ras al khaimah|sharjah|umm al qaywayn|umm al quwain;2788:beja|ben arous|bizerte|gabes|gafsa|jendouba|kairouan|kasserine|kebili|l ariana|la manouba|le kef|mahdia|medenine|monastir|nabeul|sfax|sidi bouzid|siliana|sousse|tataouine|tozeur|tunis|zaghouan;2792:adana|adıyaman|afyonkarahisar|agrı|aksaray|amasya|ankara|antalya|ardahan|artvin|aydın|balıkesir|bartın|batman|bayburt|bilecik|bingol|bitlis|bolu|burdur|bursa|canakkale|cankırı|corum|denizli|diyarbakır|duzce|edirne|elazıg|erzincan|erzurum|eskisehir|gaziantep|giresun|gumushane|hakkari|hatay|igdır|isparta|istanbul|izmir|kahramanmaras|karabuk|karaman|kars|kastamonu|kayseri|kilis|kocaeli|konya|kutahya|kırklareli|kırsehir|kırıkkale|malatya|manisa|mardin|mersin|mugla|mus|nevsehir|nigde|ordu|osmaniye|rize|sakarya|samsun|sanlıurfa|siirt|sinop|sivas|sırnak|tekirdag|tokat|trabzon|tunceli|usak|van|yalova|yozgat|zonguldak;2795:ahal|balkan|dasoguz|lebap|mary;2798:funafuti;2804:avtonomna respublika krym|cherkaska oblast|chernihivska oblast|chernivetska oblast|dnipropetrovska oblast|donetska oblast|ivano frankivska oblast|kharkivska oblast|khersonska oblast|khmelnytska oblast|kirovohradska oblast|kyivska oblast|luhanska oblast|lvivska oblast|mykolaivska oblast|odeska oblast|poltavska oblast|rivnenska oblast|sumska oblast|ternopilska oblast|vinnytska oblast|volynska oblast|zakarpatska oblast|zaporizka oblast|zhytomyrska oblast;2818:ad daqahliyah|al bahr al ahmar|al buhayrah|al fayyum|al gharbiyah|al iskandariyah|al isma iliyah|al jizah|al minufiyah|al minya|al qahirah|al qalyubiyah|al uqsur|al wadi al jadid|alexandria governorate|as suways|ash sharqiyah|aswan|asyut|bani suwayf|bur sa id|cairo governorate|dumyat|giza governorate|janub sina|kafr ash shaykh|matruh|qina|shamal sina|suhaj;2826:cymru gb cym|england|northern ireland|scotland|wales|wales cymru gb cym;2834:arusha|coast|dar es salaam|dodoma|geita|iringa|kagera|katavi|kigoma|kilimanjaro|lindi|manyara|mara|mbeya|morogoro|mtwara|mwanza|njombe|pemba north|pemba south|rukwa|ruvuma|shinyanga|simiyu|singida|songwe|tabora|tanga|zanzibar north|zanzibar south|zanzibar west;2840:alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|district of columbia|florida|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming;2854:boucle du mouhoun|cascades|centre|centre est|centre nord|centre ouest|centre sud|est|hauts bassins|nord|plateau central|sahel|sud ouest;2858:artigas|canelones|cerro largo|colonia|durazno|flores|florida|lavalleja|maldonado|montevideo|paysandu|rio negro|rivera|rocha|salto|san jose|soriano|tacuarembo|treinta y tres;2860:andijon|buxoro|farg ona|jizzax|namangan|navoiy|qashqadaryo|qoraqalpog iston respublikasi|samarqand|sirdaryo|surxondaryo|toshkent|xorazm;2862:amazonas|anzoategui|apure|aragua|barinas|bolivar|carabobo|cojedes|delta amacuro|falcon|guarico|la guaira|lara|merida|miranda|monagas|nueva esparta|portuguesa|sucre|tachira|trujillo|yaracuy|zulia;2876:alo|sigave|uvea;2882:a ana|aiga i le tai|atua|fa asaleleaga|gaga emauga|gagaifomauga|palauli|satupa itea|tuamasaga|va a o fonoti|vaisigano;2887:abyan|ad dali|adan|al bayda|al hudaydah|al jawf|al mahrah|al mahwit|amran|arkhabil suqutra|dhamar|hadramawt|hajjah|ibb|lahij|ma rib|raymah|sanʻa|saʻdah|shabwah|taʻizz;2894:central|copperbelt|eastern|luapula|lusaka|muchinga|north western|northern|southern|western';
+  const plainKey = s => key(String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, ''));
+  let worldRegions = null;
+  // "jalisco" -> ['Mexico']; "punjab" -> ['India', 'Pakistan']
+  const worldRegion = name => {
+    if (!worldRegions) {
+      worldRegions = new Map();
+      const byId = new Map(COUNTRIES.map(c => [c[1], c[0]]));
+      WORLD_REGIONS_SRC.split(';').forEach(part => {
+        const [id, list] = part.split(':');
+        list.split('|').forEach(k => { const a = worldRegions.get(k) || []; a.push(byId.get(id)); worldRegions.set(k, a); });
+      });
+    }
+    return worldRegions.get(plainKey(name)) || null;
   };
   const LANGS = [
     ['en', 'English'], ['ar', 'Arabic'], ['es', 'Spanish'], ['fr', 'French'], ['de', 'German'], ['ur', 'Urdu'],
@@ -422,9 +641,12 @@
   };
   const usState = (p, allowCode) => lookupCode(US_STATES, p, allowCode);
   const province = (p, allowCode) => lookupCode(CA_PROVINCES, p, allowCode);
-  const inMap = (map, p) => { const k = key(p); for (const r in map) if (key(r) === k) return map[r]; return null; };
+  const inMap = (map, p) => { const k = plainKey(p); for (const r in map) if (plainKey(r) === k) return map[r]; return null; };
   const regionState = p => inMap(REGION_STATES, p);
   const regionCity = p => inMap(REGION_CITIES, p);
+  // Australian state codes after a city; WA and SA only next to an Australian city, since WA is also Washington
+  const AU_CODES = { NSW: 'New South Wales', VIC: 'Victoria', QLD: 'Queensland', TAS: 'Tasmania', ACT: 'Australian Capital Territory', NT: 'Northern Territory', WA: 'Western Australia', SA: 'South Australia' };
+  const auState = (q, auCity) => { const c = norm(q).toUpperCase().replace(/\./g, ''); return AU_CODES[c] && (auCity || (c !== 'WA' && c !== 'SA')) ? AU_CODES[c] : null; };
   const titleCase = s => s.replace(/\b\p{L}/gu, c => c.toUpperCase());
   const nice = p => p === p.toLowerCase() ? titleCase(p) : p;
   const isKnownPlace = p => !!(findCountry(p) || usState(p, false) || province(p, false) || regionState(p) || regionCity(p));
@@ -499,6 +721,8 @@
             name = nice(p);
             while (j < parts.length) {
               const q = parts[j];
+              const au = !region && !country ? auState(q, regionCity(p) === 'Australia') : null;
+              if (au) { region = au; country = 'Australia'; j++; continue; }
               const qs = !region && !country ? (usState(q, true) || province(q, true) || (regionState(q) ? nice(q) : null)) : null;
               if (qs) {
                 region = qs; j++;
@@ -506,7 +730,13 @@
                 continue;
               }
               const qc = findCountry(q);
-              if (qc) { country = qc.name; j++; }
+              if (qc) { country = qc.name; j++; break; }
+              if (region || country) break;
+              // a region the tool knows for that country: "Monterrey, Nuevo León, Mexico", "Guadalajara, Jalisco"
+              const nc = j + 1 < parts.length ? findCountry(parts[j + 1]) : null;
+              const wr = worldRegion(q);
+              if (nc && j + 2 === parts.length && wr && wr.includes(nc.name)) { region = nice(q); country = nc.name; j += 2; break; }
+              if (!nc && parts.length === 2 && j === 1 && wr && wr.length === 1) { region = nice(q); country = wr[0]; j++; break; }
               break;
             }
             if (!country && !region) { const known = regionCity(p); if (known) { country = known; kind = 'known-city'; } }
@@ -536,32 +766,62 @@
     return { list, presence: info.presence, notes: info.notes };
   }
 
-  // "1.5k", "₹1.5L" (lakh), "₹1.2 Cr" (crore)
-  const AMOUNT = /(\d+(?:\.\d+)?)\s*(k|thousand|lakhs?|lacs?|l|crores?|cr)?(?![a-z\d])/i;
-  const money = s => {
-    const t = String(s || '').replace(/,/g, '');
-    const m = t.match(AMOUNT);
+  /* Amounts in any currency: the Ads Editor file has no currency, so only the number matters.
+     "$1,500", "1.500 €", "1 500 zł", "CHF 1'200", "₹2,00,000", "R$ 2.500,50", "AED 18,000", "١٢٠٠", "1.5k", "₹1.5L", "₹1.2 Cr", "1.2M", "Rp 1,5 juta" */
+  const asciiDigits = s => String(s || '').replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x6F0));
+  // currencies written with three decimals, where "1.500" is one and a half
+  const THREE_DECIMALS = /\b(?:kwd|bhd|omr|jod|tnd|lyd|iqd)\b|د\.ك|ب\.د|ر\.ع/i;
+  const MULTIPLIERS = [[/^(?:k|thousand|ribu)$/i, 1e3], [/^(?:lakhs?|lacs?|l)$/i, 1e5], [/^(?:crores?|cr)$/i, 1e7], [/^(?:m|mn|mio|million|millions|juta)$/i, 1e6], [/^[万萬]$/, 1e4], [/^[億亿]$/, 1e8]];
+  function findAmount(text) {
+    const t = asciiDigits(text);
+    // digits with separators; a space only separates thousands when exactly three digits follow it
+    const m = t.match(/\d(?:\d|[.,'’](?=\d)|[   ](?=\d{3}(?!\d)))*/);
     if (!m) return null;
-    let n = +m[1];
-    const u = (m[2] || '').toLowerCase();
-    if (u === 'k' || u === 'thousand') n *= 1000; else if (/^c/.test(u)) n *= 10000000; else if (u) n *= 100000;
-    return n;
-  };
+    let raw = m[0].replace(/[   '’]/g, '');
+    const dots = (raw.match(/\./g) || []).length, commas = (raw.match(/,/g) || []).length;
+    if (dots && commas) {
+      const dec = raw.lastIndexOf('.') > raw.lastIndexOf(',') ? '.' : ',';
+      raw = raw.split(dec === '.' ? ',' : '.').join('').replace(',', '.');
+    } else if (commas) {
+      // "1,500" and Indian "2,00,000" group thousands; "12,5" and "13,16" are decimals
+      raw = /^\d{1,3}(?:,\d{3})+$|^\d{1,2}(?:,\d{2})*,\d{3}$/.test(raw) || commas > 1 ? raw.replace(/,/g, '') : raw.replace(',', '.');
+    } else if (dots > 1 || (dots === 1 && /^\d{1,3}\.\d{3}$/.test(raw) && !THREE_DECIMALS.test(t))) {
+      // "1.500.000" and "1.500 €" group thousands; nobody writes money with three decimals
+      raw = raw.replace(/\./g, '');
+    }
+    let n = parseFloat(raw);
+    if (!isFinite(n)) return null;
+    let end = m.index + m[0].length;
+    const mult = t.slice(end).match(/^\s*([a-z]+|[万萬億亿])(?![a-z\d])/i);
+    if (mult) {
+      const hit = MULTIPLIERS.find(([rx]) => rx.test(mult[1]));
+      // "/m" after a number is "per month", not million
+      if (hit && !(hit[1] === 1e6 && /^m$/i.test(mult[1]) && /\/\s*$/.test(t.slice(0, m.index)))) { n *= hit[1]; end += mult[0].length; }
+    }
+    return { n: Math.round(n * 100) / 100, index: m.index, end, text: t };
+  }
+  const money = s => { const a = findAmount(s); return a ? a.n : null; };
 
   // "$1,500/month", "50 per day", "Monthly budget: 1500 (about 49/day)" -> { daily, basis, amount }
   function parseBudget(label, value) {
     // "£1,500 pcm", "£900 p/m", "₹2,00,000 p.m." are monthly
-    const t = String(value || '').replace(/,/g, '')
+    const t = asciiDigits(value)
       .replace(/(^|[\s\d])(?:pcm|p\.\s?m\.?|p\/m|per calendar month)(?=[\s).;]|$)/gi, '$1 per month')
       .replace(/(^|[\s\d])(?:p\.\s?a\.?|p\/a)(?=[\s).;]|$)/gi, '$1 per year')
-      .replace(/(^|[\s\d])(?:p\/d|p\.\s?d\.)(?=[\s).;]|$)/gi, '$1 per day');
-    const m = t.match(AMOUNT);
-    if (!m) return null;
-    const amount = money(m[0]);
-    const unitOf = w => /^d/i.test(w) ? 'daily' : /^(?:mo|mth|month)/i.test(w) ? 'monthly' : /^w/i.test(w) ? 'weekly' : 'yearly';
-    const UNIT = /(?:\/\s*|per\s+|a\s+|an\s+|each\s+|every\s+)?\b(day|daily|d|month|monthly|mo|mth|week|weekly|wk|year|yr|annual|annually)\b/i;
+      .replace(/(^|[\s\d])(?:p\/d|p\.\s?d\.)(?=[\s).;]|$)/gi, '$1 per day')
+      // "$3k/m", and day or month words in other languages: Polish, Turkish, Malay/Indonesian, Arabic, Urdu, Hindi, Chinese, Japanese
+      .replace(/\/\s*m(?![\p{L}])/giu, ' per month')
+      .replace(/(?<![\p{L}])(?:dziennie|dzie[nń]|günlük|gün|harian|sehari|hari)(?![\p{L}])|يومياً|يوميا|يومي|في اليوم|روزانہ|روزانه|प्रतिदिन|दैनिक|每天|每日|\/\s*[日天]/giu, ' per day')
+      .replace(/(?<![\p{L}])(?:miesięcznie|miesiąc|mies|aylık|bulanan|sebulan|bulan)(?![\p{L}])|شهرياً|شهريا|شهري|في الشهر|ماہانہ|ماهانه|मासिक|प्रति माह|每月|\/\s*月/giu, ' per month');
+    const a = findAmount(t);
+    if (!a) return null;
+    const m = { index: a.index, 0: t.slice(a.index, a.end) };
+    const amount = a.n;
+    // English plus the common Spanish, Portuguese, French, German, Italian and Dutch words
+    const unitOf = w => /^(?:d|tag|jour|giorno|dag)/i.test(w) ? 'daily' : /^(?:mo|mth|month|mes|mês|monat|mois|mese|maand)/i.test(w) ? 'monthly' : /^(?:w|semana|semaine|woche)/i.test(w) ? 'weekly' : 'yearly';
+    const UNIT = /(?:\/\s*|per\s+|a\s+|an\s+|each\s+|every\s+|por\s+|al\s+|par\s+|pro\s+)?(?<![\p{L}\d])(day|daily|d|month|monthly|mo|mth|week|weekly|wk|year|yr|annual|annually|d[ií]a|diario|tag|t[äa]glich|jour|giorno|dag|mes|mês|mensual|mensal|monat|monatlich|mois|mensuel|mese|maand|semana|semaine|woche|año|ano|jahr|an)(?![\p{L}\d])/iu;
     let basis = null;
-    const after = t.slice(m.index + m[0].length).match(new RegExp('^\\s*' + UNIT.source, 'i'));
+    const after = t.slice(m.index + m[0].length).match(new RegExp('^\\s*' + UNIT.source, 'iu'));
     if (after) basis = unitOf(after[1]);
     const before = t.slice(0, m.index);
     if (!basis && /\b(?:daily|per day|a day)\b/i.test(before)) basis = 'daily';
@@ -574,8 +834,8 @@
     if (!basis) {
       // only trust a unit elsewhere in the value when it is not inside an aside like "(about $1,520/month)"
       const bare = t.replace(/\([^)]*\)/g, ' ');
-      const units = bare.match(new RegExp(UNIT.source, 'gi')) || [];
-      if (units.length === 1) basis = unitOf(units[0].replace(/^(?:\/\s*|per\s+|a\s+|an\s+|each\s+|every\s+)/i, ''));
+      const units = bare.match(new RegExp(UNIT.source, 'giu')) || [];
+      if (units.length === 1) basis = unitOf(units[0].replace(/^(?:\/\s*|per\s+|a\s+|an\s+|each\s+|every\s+|por\s+|al\s+|par\s+|pro\s+)/i, ''));
     }
     const div = { daily: 1, monthly: 30.4, weekly: 7, yearly: 365 }[basis || 'daily'];
     return { daily: Math.round((amount / div) * 100) / 100, basis: basis || 'unlabeled', amount };
@@ -717,7 +977,10 @@
   function matchSetting(line) {
     const t = norm(line).replace(/\*\*|__/g, '');
     const m = t.match(/^([^:=]{1,60}?)\s*(?::|=|\s[-–—]\s|[–—]|\t)\s*(.+)$/);
-    return m ? settingFrom(m[1], m[2]) : null;
+    if (m) return settingFrom(m[1], m[2]);
+    // "Budget 20/day", "Daily budget $40" written without a colon
+    const b = t.match(/^((?:daily |monthly |weekly |total )?budget)\s+(?=[$€£₹¥\d]|(?:usd|aed|gbp|eur|inr|pkr|cad|aud|rs\.?)\s*\d)(.{1,60})$/i);
+    return b ? settingFrom(b[1], b[2]) : null;
   }
 
   /* ---------- keywords and ad text ---------- */
@@ -765,6 +1028,7 @@
     if (/^(?:platform|channel|network|ad platform|media|source platform)$/.test(t)) return 'platform';
     if (/^(?:applied to|apply to|applies to|scope|level|used in|use in|campaigns? applied)$/.test(t)) return 'scope';
     if (/^(?:bid(?:ding)?(?: strategy)?|bidding strategy|bid type|strategy)$/.test(t)) return 'bid';
+    if (/^(?:target cpa|tcpa|cpa target|target cost per (?:acquisition|conversion|lead))$/.test(t)) return 'tcpa';
     if (/^campaigns?(?: name)?$/.test(t)) return 'campaign';
     if (/^(?:ad ?groups?|adgroup)(?: name| theme)?$|^theme$|^ag$/.test(t)) return 'adgroup';
     if (/negative|^negs?$/.test(t)) return 'negatives';
@@ -822,7 +1086,7 @@
       const vi = head.findIndex(c => /^(?:text|copy|value|content|asset text|ad text|copy text)$/.test(c));
       if (ei >= 0 && vi >= 0) {
         const labels = rows.slice(hi + 1).map(r => norm(r[ei] || '')).filter(Boolean);
-        const copyish = labels.filter(l => NUMBERED_ONLY.test(l) || /^(?:headline|description|desc|h|d)\s*\d{1,2}$|^(?:final url|landing page|path\s*[12]|display path)$/i.test(l)).length;
+        const copyish = labels.filter(l => NUMBERED_ONLY.test(l) || /^(?:headline|description|desc|h|d)\s*\d{1,2}$|^(?:headlines?|descriptions?|keywords?|kws?|negatives?|negative keywords?|final url|landing page|path\s*[12]|display path)$/i.test(l)).length;
         if (labels.length && copyish >= labels.length * 0.5) return { kind: 'longcopy', rows: rows.slice(hi), ei, vi, ci: fields.indexOf('campaign'), ai: fields.indexOf('adgroup') };
       }
     }
@@ -1260,6 +1524,7 @@
 
     const startSection = (c, b, stepNo) => {
       const sec = c.sec;
+      if (ag && b.t === 'li') ag.listLabels = true;
       if (sec === 'keywords' || sec === 'headlines' || sec === 'descriptions' || sec === 'adcopy') {
         const prev = lastPlain && lastPlain.step === stepNo - 1 ? lastPlain : null;
         const cycle = ag && cycleDone(ag, sec);
@@ -1390,6 +1655,11 @@
           lastPlain = null;
           return;
         case 'numbered':
+          // "H1: ..." after "KWs: ..." starts the headlines, so a line after "D2: ..." is not read as a keyword
+          if (section !== c.sec && section !== 'adcopy') {
+            section = c.sec;
+            secInfo = { sec: c.sec, label: text, matchHint: null, hint: null, scope: null, target: null, itemTypes: new Set(), sheet: false, headLevel: null };
+          }
           // "- H1: ..." items make this a bulleted list, so a plain line after them is not ad text
           if (secInfo) secInfo.itemTypes.add(b.t);
           addItem(c.sec, c.text, true); lastPlain = null;
@@ -1502,10 +1772,12 @@
         return true;
       };
       const bidFrom = (fields, r) => {
-        const bi = fields.indexOf('bid');
-        if (bi < 0 || !r[bi]) return null;
-        const s = settingFrom('Bid strategy', r[bi]);
-        return s ? { bid: s.v, targetCpa: s.targetCpa || null } : null;
+        const bi = fields.indexOf('bid'), ti = fields.indexOf('tcpa');
+        const cpa = ti >= 0 && r[ti] ? money(r[ti]) : null;
+        const s = bi >= 0 && r[bi] ? settingFrom('Bid strategy', r[bi]) : null;
+        // a Target CPA column: the amount, and the strategy when the bid column is empty
+        if (!s) return cpa > 0 ? { bid: 'tcpa', targetCpa: cpa } : null;
+        return { bid: s.v, targetCpa: s.targetCpa || (s.v === 'tcpa' && cpa > 0 ? cpa : null) };
       };
       // a campaign table's own Locations and Languages columns
       const campCols = (fields, r, camp) => {
@@ -1781,6 +2053,7 @@
       // "---" then "Negative Keywords": the rule ends the ad group above, so the list is not that ad group's
       if (b.afterRule && ag && cls[i].k === 'section' && (cls[i].sec === 'negatives' || cls[i].sec === 'other' || cls[i].sec === 'settings') && !cls[i].qualifier) { ag = null; agLevel = 99; }
       // same for a blank line before a plain "Negative Keywords" once the ad group's ad is written
+      else if (b.t === 'p' && ag && ag.listLabels && (ag.headlines.length || ag.descriptions.length) && cls[i].k === 'section' && cls[i].sec === 'negatives' && !cls[i].qualifier) { ag = null; agLevel = 99; }
       else if (b.gapBefore && gapsMean && b.t === 'p' && !b.bold && ag && (ag.headlines.length || ag.descriptions.length) && cls[i].k === 'section' && cls[i].sec === 'negatives' && !cls[i].qualifier && !cls[i].inline) { ag = null; agLevel = 99; }
       if (b.t === 'table') { step++; handleTable(b.rows); return; }
       handleBlock(b, cls[i]);
@@ -1957,6 +2230,13 @@
       res.settings.bidStrategy = model.campaigns[0].bidStrategy;
       if (model.campaigns[0].targetCpa) res.settings.targetCpa = model.campaigns[0].targetCpa;
       model.campaigns.forEach(c => { c.bidStrategy = null; c.targetCpa = null; });
+    }
+    // a doc with one campaign that writes its settings under it: they also fill the empty account defaults
+    if (model.campaigns.length === 1) {
+      const c = model.campaigns[0];
+      if (c.locations && c.locations.length && !res.settings.locations) res.settings.locations = c.locations.map(l => Object.assign({}, l));
+      if (c.finalUrl && !res.settings.finalUrl) res.settings.finalUrl = c.finalUrl;
+      if (c.languages && c.languages.length && !res.settings.languages) res.settings.languages = c.languages.slice();
     }
     // "Mississauga; Brampton" for one campaign when every account location is in Ontario, Canada
     const acctLocs = res.settings.locations || [];
