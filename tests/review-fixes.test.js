@@ -148,3 +148,26 @@ test('a "Note: ..." line between keywords is a note and the keywords after it ar
   assert.ok(m.skipped.some(s => s.kind === 'note' && /^Note:/.test(s.text)));
   assert.ok(m.skipped.some(s => /"Sitelinks" line/.test(s.reason)));
 });
+
+// Safeguards that an early edit failed to save; pinned so they cannot silently go missing again.
+test('"Keyword match types: Phrase + Exact" is a setting, not a keywords heading', () => {
+  const c = E.classify({ t: 'p', text: 'Keyword match types: Phrase + Exact' });
+  assert.equal(c.k, 'setting');
+  assert.equal(c.s.v, 'phrase+exact');
+});
+
+test('keywords that start with "ag" are not ad group labels; "AG 2: Name" is', () => {
+  assert.equal(E.classify({ t: 'li', text: 'ag 1 tractor parts' }).k, 'text');
+  assert.equal(E.classify({ t: 'p', text: 'ag 2 seed supply' }).k, 'text');
+  assert.deepEqual(E.classify({ t: 'p', text: 'AG 2: Drain Cleaning' }), { k: 'adgroup', name: 'Drain Cleaning', level: 9 });
+});
+
+test('ad groups and campaigns named like weak section words keep their names', () => {
+  assert.equal(E.classify({ t: 'h', level: 2, text: 'Ad Group 3: Search Ads' }).name, 'Search Ads');
+  assert.equal(E.classify({ t: 'h', level: 1, text: 'Campaign: Search Ads' }).k, 'campaign');
+});
+
+test('taught labels cannot hit built-in object keys', () => {
+  assert.equal(E.classify({ t: 'p', text: 'constructor' }, {}).k, 'text');
+  assert.equal(E.classify({ t: 'p', text: 'toString' }, {}).k, 'text');
+});

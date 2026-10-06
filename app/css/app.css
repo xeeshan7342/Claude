@@ -187,7 +187,8 @@ details.ag[open] > summary .caret { transform: rotate(45deg); }
 .ag-body { padding: 4px 16px 18px 44px; display: flex; flex-direction: column; gap: 16px; }
 @media (max-width: 700px) { .ag-body { padding-left: 16px; } }
 .grid-3 { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 10px; }
-.grid-paths { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr); gap: 10px; align-items: end; }
+.grid-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+.grid-paths .serp-label { grid-column: 1 / -1; }
 @media (max-width: 860px) { .grid-3, .grid-paths { grid-template-columns: minmax(0, 1fr); } }
 .disp-url { font: 13px var(--f-mono); color: var(--ink-2); padding: 8px 0; overflow-wrap: anywhere; }
 .ag-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 18px; }

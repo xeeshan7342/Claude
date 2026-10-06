@@ -19,6 +19,7 @@
     del(k) { try { window.localStorage.removeItem(k); } catch (e) { /* storage blocked */ } }
   };
 
+  const MT_LABEL = { phrase: 'Phrase', exact: 'Exact', broad: 'Broad', 'phrase+exact': 'Phrase + Exact' };
   const DEFAULTS = {
     finalUrl: '', matchType: 'phrase', bidStrategy: 'maxclicks', targetCpa: '', maxCpc: '',
     locations: [], allLocations: false, presenceOnly: true, languages: ['en'], searchPartners: false, campaignStatus: 'Paused', startDate: ''
@@ -55,7 +56,11 @@
     $('#startDate').min = todayISO();
 
     $('#finalUrl').addEventListener('input', e => { S.finalUrl = e.target.value.trim(); updateAllSerps(); refresh(); });
-    $$('input[name="matchType"]').forEach(r => r.addEventListener('change', e => { S.matchType = e.target.value; refresh(); }));
+    $$('input[name="matchType"]').forEach(r => r.addEventListener('change', e => {
+      S.matchType = e.target.value;
+      $$('select[data-f="matchType"] option[value=""]').forEach(o => { o.textContent = 'Account default (' + MT_LABEL[S.matchType] + ')'; });
+      refresh();
+    }));
     $('#bidStrategy').addEventListener('change', e => { S.bidStrategy = e.target.value; syncBidRows(); refresh(); });
     $('#targetCpa').addEventListener('input', e => { S.targetCpa = e.target.value; refresh(); });
     $('#maxCpc').addEventListener('input', e => { S.maxCpc = e.target.value; refresh(); });
@@ -345,6 +350,9 @@
       '<div class="grid-paths">' +
         '<div class="field"><label class="lbl" for="path1-' + g.id + '">Path 1 <span class="mono" data-cnt="path1-' + g.id + '">' + (g.path1 || '').length + '/15</span></label><input id="path1-' + g.id + '" data-f="path1" value="' + esc(g.path1) + '" spellcheck="false"></div>' +
         '<div class="field"><label class="lbl" for="path2-' + g.id + '">Path 2 <span class="mono" data-cnt="path2-' + g.id + '">' + (g.path2 || '').length + '/15</span></label><input id="path2-' + g.id + '" data-f="path2" value="' + esc(g.path2) + '" spellcheck="false"></div>' +
+        '<div class="field"><label class="lbl" for="mt-' + g.id + '">Match type</label><select id="mt-' + g.id + '" data-f="matchType">' +
+          [['', 'Account default (' + MT_LABEL[S.matchType] + ')'], ['phrase', 'Phrase'], ['exact', 'Exact'], ['broad', 'Broad'], ['phrase+exact', 'Phrase + Exact']]
+            .map(([v, l]) => '<option value="' + v + '"' + ((g.matchType || '') === v ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select></div>' +
         (manual ? '<div class="field"><label class="lbl" for="maxCpc-' + g.id + '">Max CPC <span class="mono">override</span></label><input id="maxCpc-' + g.id + '" data-f="maxCpc" type="number" min="0" step="0.01" inputmode="decimal" value="' + (g.maxCpc != null ? esc(g.maxCpc) : '') + '" placeholder="' + esc(S.maxCpc || 'default') + '"></div>'
           : '<div class="serp-label">Paths are suggested from the ad group name. Edit them freely.</div>') +
       '</div>' +
@@ -459,6 +467,11 @@
     });
     root.addEventListener('change', e => {
       const t = e.target;
+      if (t.dataset.f === 'matchType') {
+        const g = findG(t.closest('[data-gid]').dataset.gid);
+        g.matchType = t.value || null; state.dirty = true; refresh();
+        return;
+      }
       if (t.dataset.f !== 'campaignId') return;
       const g = findG(t.closest('[data-gid]').dataset.gid);
       g.campaignId = t.value;
