@@ -1026,7 +1026,8 @@
     const t = norm(cell).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z0-9#. ]+/g, ' ').replace(/\s+/g, ' ').trim();
     // "Boiler Repair - Manchester (campaign negatives)"
     if (/\(\s*(?:campaign |account |ad ?group |shared )?(?:level )?negatives?(?: key ?words?)?\s*\)/i.test(norm(cell))) return 'negatives';
-    if (!t) return null;
+    // a column header is a few words; "Search Network only, no Search Partners at this budget." is a value
+    if (!t || t.split(' ').length > 8 || /[.!?]$/.test(norm(cell))) return null;
     if (/^(?:#|no|no\.|sr|sr\.|s\.? ?no\.?|sl|serial|chars?|characters?|char(?:acter)? count|count|length|len|character length|status|notes?|comments?|pin(?:ned)?|position|priority|rank|volume|search volume|avg\.? monthly searches|monthly searches|searches|competition|competition index|cpc|avg\.? cpc|est\.? cpc|top of page bid.*|bid range|intent|difficulty|kd|trend|source|type|value)$/.test(t)) return 'ignore';
     if (/^(?:sitelinks?(?: text| title| name| link text)?|callouts?(?: text)?|structured snippets?|snippets?(?: values?| header)?|extensions?|assets?(?: type)?|promotions?(?: text)?|price(?: assets?)?|image(?: assets?)?|call (?:asset|extension)s?)$/.test(t)) return 'asset';
     if (/^(?:platform|channel|network|ad platform|media|source platform)$/.test(t)) return 'platform';
@@ -1045,7 +1046,7 @@
     if (/^(?:display )?(?:url )?paths?$|^display url$/.test(t)) return 'displayPath';
     if (/^(?:display )?(?:url )?path ?1$/.test(t)) return 'path1';
     if (/^(?:display )?(?:url )?path ?2$/.test(t)) return 'path2';
-    if (/budget/.test(t)) return 'budget';
+    if (/budget/.test(t) && t.split(' ').length <= 5) return 'budget';
     if (/^(?:target )?(?:locations?|geos?|geo targeting|location targeting|geography|countries|cities|regions?|markets?)$/.test(t)) return 'locations';
     if (/^(?:target )?languages?$/.test(t)) return 'languages';
     if (/^(?:max\.? ?cpc|default (?:max )?cpc|ad group (?:max )?cpc|max(?:imum)? cpc bid|default bid)$/.test(t)) return 'maxCpc';
@@ -1076,6 +1077,12 @@
     const filled = r => r.filter(Boolean).length;
     const single = rows.filter(r => filled(r) <= 1).length;
     if (width <= 1 || (rows.length >= 3 && single / rows.length >= 0.7)) return { kind: 'lines', rows };
+    // a key that explains the doc's own layout: "Section | Table Headers | One Row Equals", or cells listing "Campaign | Ad Group | Keyword"
+    const h0 = (rows[0] || []).map(c => norm(c).toLowerCase());
+    const legendHead = /^(?:sections?|tables?|tabs?|sheets?|parts?|blocks?|terms?|columns?|fields?)$/.test(h0[0] || '')
+      && h0.slice(1).some(c => /\b(?:headers?|columns?|format|meaning|means|description|explanation|purpose|contains|equals|definition)\b/.test(c));
+    const pipeRows = rows.slice(1).filter(r => r.some(c => /\S \| \S/.test(c))).length;
+    if (legendHead || (rows.length >= 4 && pipeRows >= (rows.length - 1) * 0.6)) return { kind: 'legend', rows };
     // header row: the first of the first 3 rows with the most recognised field columns
     let hi = -1, best = 0;
     for (let r = 0; r < Math.min(3, rows.length); r++) {
@@ -1753,6 +1760,7 @@
       const rows = shape.rows;
       lastPlain = null;
       const firstRow = (rows[0] || []).filter(Boolean).join(' | ');
+      if (shape.kind === 'legend') { skip(firstRow, 'explains how the doc is laid out, so it is not imported', { kind: 'other' }); return; }
       if (shape.kind === 'assets') { skip(firstRow, 'sitelink, callout or other asset table, which is not exported', { kind: 'other' }); return; }
       if (shape.kind === 'comparison') { skip(firstRow, 'comparison table between platforms, not ad content', { kind: 'other' }); return; }
       // an "Overview" or "Brief" tab that lists settings: read the settings, report the rest
@@ -1816,6 +1824,7 @@
           addItem(/^h/i.test(m[1]) ? 'headlines' : 'descriptions', v.replace(/\n/g, ' '), true);
           return;
         }
+        if (/\b(?:final url|landing page|lp|url)\b/i.test(label) && !findUrl(v)) { skip(label + ': ' + norm(v), 'describes the landing page but gives no URL. Put the page address in this ad group\'s Final URL box.', { kind: 'lp' }); return; }
         if (/^(?:sitelinks?|callouts?|structured snippets?|snippets?)\b/i.test(label)) { skip(label + ': ' + norm(v), 'in the "' + label + '" row, which is not exported', { kind: 'other' }); return; }
         const sl = sectionLabel(label);
         if (sl && !sl.inline && COPY.has(sl.sec)) {
@@ -1884,6 +1893,15 @@
           if (camp && isTotalRow(camp)) return;
           if (!camp && ags && res.mapping.length) { res.mapping[res.mapping.length - 1].adGroups.push(...splitList(ags).map(cleanName)); return; }
           if (!camp) return;
+          // "Campaign | Ad Group | Note": notes go to the report
+          rows[hi].forEach((h, ix) => { if (r[ix] && /^(?:notes?|comments?|remarks?|rationale|why)$/i.test(norm(h))) skip(r[ix], 'a note for the team, not ad text', { kind: 'note' }); });
+          // a campaign listed again (a second table, or one row per ad group) adds to the same entry
+          const prevEntry = res.mapping.find(x => key(x.campaign) === key(tidyCampaign(camp)));
+          if (prevEntry) {
+            splitList(ags).map(cleanName).forEach(n => { if (!prevEntry.adGroups.some(a => key(a) === key(n))) prevEntry.adGroups.push(n); });
+            if (!prevEntry.budget && bi >= 0 && r[bi]) prevEntry.budget = parseBudget(rows[hi][bi], r[bi]);
+            return;
+          }
           res.mapping.push({ campaign: tidyCampaign(camp), adGroups: splitList(ags).map(cleanName), budget: bi >= 0 && r[bi] ? parseBudget(rows[hi][bi], r[bi]) : null });
           const bid = bidFrom(fields, r);
           if (bid) res.campaignBids[key(tidyCampaign(camp))] = bid;

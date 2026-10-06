@@ -98,3 +98,22 @@ test('a count after a list label is not an ad group: "Sample RSA Headlines (30 c
     + '<p><strong>Sample RSA Descriptions (90 char max) — 2 of 4</strong></p><ul><li>Physician led weight loss programs tailored to you. Book your consult today.</li><li>Serving nearby suburbs. Schedule your appointment now with our team.</li></ul>');
   assert.deepEqual(summary(m).map(g => [g.name, g.headlines.length, g.descriptions.length]), [['Medical Weight Loss', 3, 2]]);
 });
+
+test('table-format doc: a layout key table, a settings table whose text says "budget", repeated campaigns and a notes table', () => {
+  const { parseHTML } = require('./helpers');
+  const tbl = rows => '<table>' + rows.map(r => '<tr>' + r.map(c => '<td><p>' + c + '</p></td>').join('') + '</tr>').join('') + '</table>';
+  const m = parseHTML('<p><strong>How to Read This File</strong></p>'
+    + tbl([['Section', 'Table Headers', 'One Row Equals'], ['Account Settings', 'Setting | Value', 'One account setting'], ['Google Keywords', 'Campaign | Ad Group | Match Type | Keyword', 'One keyword'], ['Responsive Search Ads', 'Campaign | Ad Group | Asset Type | Text', 'One headline']])
+    + '<p><strong>1. Account Settings</strong></p>' + tbl([['Setting', 'Value'], ['Network', 'Search Network only, no Search Partners at this budget.'], ['Locations', 'Bloomingdale, IL'], ['Languages', 'English.']])
+    + '<p><strong>2. Campaign Budgets</strong></p>' + tbl([['Campaign', 'Monthly Budget', 'Daily Budget', 'Ad Groups'], ['Aesthetics', '$200', '$6.58', 'Injectables']])
+    + '<p><strong>3. Keywords</strong></p>' + tbl([['Campaign', 'Ad Group', 'Match Type', 'Keyword'], ['Aesthetics', 'Injectables', 'Phrase', 'botox near me'], ['Aesthetics', 'Injectables', 'Exact', 'botox near me']])
+    + '<p><strong>4. Responsive Search Ads</strong></p>' + tbl([['Campaign', 'Ad Group', 'Asset Type', 'Position', 'Text', 'Characters'],
+      ['Aesthetics', 'Injectables', 'Headline', '1', 'Botox & Filler Clinic', '21'], ['Aesthetics', 'Injectables', 'Final URL Note', '-', 'Injectables service page', '-']])
+    + '<p><strong>6. Build Notes</strong></p>' + tbl([['Campaign', 'Ad Group', 'Note'], ['Aesthetics', 'Injectables', 'Most competitive ad group in the account.']]));
+  assert.deepEqual(m.campaigns.map(c => [c.name, c.budget]), [['Aesthetics', 6.58]]);
+  assert.deepEqual(summary(m).map(g => [g.name, g.keywords, g.headlines]), [['Injectables', ['"botox near me"', '[botox near me]'], ['Botox & Filler Clinic']]]);
+  assert.deepEqual(m.detected.locations.map(l => l.name), ['Bloomingdale, Illinois, United States']);
+  assert.ok(!m.notes.some(n => /listed under/.test(n.msg)), 'the notes table does not list the ad group twice');
+  assert.ok(m.skipped.some(s => s.kind === 'other' && /laid out/.test(s.reason)));
+  assert.ok(m.skipped.some(s => s.kind === 'lp') && m.skipped.some(s => s.kind === 'note' && /competitive/.test(s.text)));
+});
