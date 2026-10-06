@@ -19,11 +19,14 @@ Word (.docx), Excel (.xlsx, every visible tab), CSV and TSV (including Ads Edito
 The same campaign can be written up in many ways, and the reader handles these:
 
 - Ad groups as headings with or without the words "Ad Group", as table rows, as table columns, as spreadsheet tabs, or as a plain line before a Keywords list.
-- Campaigns from a campaign table (`Campaign | Ad Groups | Budget`), from `Campaign 1: ...` headings, or from several headings that each hold ad groups.
-- Keywords as lists, comma lists, tables or Keyword Planner pastes (search volume, CPC and competition columns are dropped). `[exact]`, `"phrase"`, `keyword (broad)` and `+broad` keep their match type, and `-keyword` is read as a negative.
-- Headlines and descriptions as lists, tables with a character-count column, numbered lines (`Headline 3: ...`, `H2 - ...`), `A | B | C` lines or one mixed "Ad copy" list (split by length).
-- Negative keywords at account, campaign or ad group level, whatever the heading calls them.
-- Settings: final URL, budgets (daily, weekly or monthly; monthly is divided by 30.4), locations (cities, states, provinces and countries, with Google location IDs for countries), languages, bid strategy, target CPA, max CPC, match type, search partners, presence-only and start date.
+- Campaigns from a campaign table (`Campaign | Ad Groups | Budget`), from `Campaign 1: ...` headings, from several headings that each hold ad groups, or from `Campaign | name` blocks in a settings tab.
+- Keywords as lists, comma lists, tables, columns per match type (`Exact | Phrase | Broad`) or Keyword Planner pastes (search volume, CPC and competition columns are dropped). `[exact]`, `"phrase"`, `keyword (broad)` and `+broad` keep their match type, and `-keyword` is read as a negative.
+- Headlines and descriptions as lists, tables with a character-count column, one row per asset (`Asset | Text`), numbered lines (`Headline 3: ...`, `H2 - ...`), `A | B | C` lines or one mixed "Ad copy" list (split by length). Keyword insertion such as `{KeyWord:Dental Implants}` is counted by its default text, as Google does.
+- Negative keywords at account, campaign or ad group level, whatever the heading calls them. That includes one column per campaign, a `Level` column, and labels such as `Brand only:` or `Account level (all campaigns):`.
+- Settings: final URL, budgets (daily, weekly or monthly; monthly is divided by 30.4; `pcm`, `p/m`, lakh and crore are understood), locations (cities, states, provinces and countries, with Google location IDs for countries), languages, bid strategy, target CPA, max CPC, match type, search partners, presence-only and start date. Bid strategy, target CPA, locations and languages can differ per campaign.
+- Answers copied from ChatGPT or Claude (icons, bold labels, `---` rules) and plain-text pastes where only blank lines separate the sections.
+
+Sections for Meta, Microsoft Ads, LinkedIn, TikTok and other platforms are skipped as one unit, so their copy never ends up in a Search ad.
 
 Sitelinks, callouts, notes and strategy text are not exported. They show up in the import report instead of leaking into ads.
 

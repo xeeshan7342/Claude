@@ -276,6 +276,10 @@ details.panel:not([open]) { gap: 0; }
 /* campaign extras */
 .camp-extra { padding: 10px 16px 0; display: grid; gap: 10px; }
 .camp-extra .neg-area { min-height: 54px; }
+.camp-bid { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.camp-bid .lbl { margin: 0; }
+.camp-bid select { width: auto; min-width: 0; max-width: 100%; }
+.camp-bid input { width: 110px; }
 .budget-hint { font-size: 11.5px; color: var(--ink-3); }
 .loc-override { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: var(--ink-2); }
 

@@ -61,7 +61,12 @@
       $$('select[data-f="matchType"] option[value=""]').forEach(o => { o.textContent = 'Account default (' + MT_LABEL[S.matchType] + ')'; });
       refresh();
     }));
-    $('#bidStrategy').addEventListener('change', e => { S.bidStrategy = e.target.value; syncBidRows(); refresh(); });
+    $('#bidStrategy').addEventListener('change', e => {
+      S.bidStrategy = e.target.value; syncBidRows();
+      $$('select[data-cf="bid"] option[value=""]').forEach(o => { o.textContent = 'Account default (' + BID_LABEL[S.bidStrategy] + ')'; });
+      state.model.adGroups.forEach(g => { if (state.open.has(g.id)) rerenderAg(g); });
+      refresh();
+    });
     $('#targetCpa').addEventListener('input', e => { S.targetCpa = e.target.value; refresh(); });
     $('#maxCpc').addEventListener('input', e => { S.maxCpc = e.target.value; refresh(); });
     sel.addEventListener('change', e => {
@@ -124,8 +129,10 @@
   }
   function syncBidRows() {
     $('#tcpaRow').hidden = S.bidStrategy !== 'tcpa';
-    $('#cpcRow').hidden = S.bidStrategy !== 'manual';
+    $('#cpcRow').hidden = S.bidStrategy !== 'manual' && !state.model.campaigns.some(c => c.bidStrategy === 'manual');
   }
+  const BID_LABEL = { maxclicks: 'Maximize clicks', maxconv: 'Maximize conversions', tcpa: 'Target CPA', manual: 'Manual CPC' };
+  const campBid = c => (c && c.bidStrategy) || S.bidStrategy;
   function renderLocations() {
     const chips = [];
     if (S.allLocations) chips.push('<span class="chip">All countries<button type="button" data-loc="all" aria-label="Remove all countries">&times;</button></span>');
@@ -310,7 +317,7 @@
 
   function copyRow(g, f, i, v) {
     const max = f === 'h' ? 30 : 90;
-    const len = E.norm(v).length;
+    const len = E.adLen(v);
     const id = f + '-' + g.id + '-' + i;
     const label = (f === 'h' ? 'Headline ' : 'Description ') + (i + 1);
     const field = f === 'h'
@@ -322,9 +329,11 @@
   }
 
   function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return 'example.com'; } }
+  // the preview shows keyword insertion with its default text, as Google does when no keyword fits
+  const shown = t => E.norm(t).replace(/\{\s*keyword\s*:\s*([^}]*)\}/gi, '$1');
   function serpInner(g) {
-    const hs = g.headlines.map(E.norm).filter(Boolean).slice(0, 3);
-    const ds = g.descriptions.map(E.norm).filter(Boolean).slice(0, 2);
+    const hs = g.headlines.map(shown).filter(Boolean).slice(0, 3);
+    const ds = g.descriptions.map(shown).filter(Boolean).slice(0, 2);
     const host = hostOf(g.finalUrl || S.finalUrl);
     const path = [g.path1, g.path2].filter(Boolean).join('/');
     return '<div class="serp-top"><b>Sponsored</b></div>' +
@@ -340,7 +349,7 @@
     if (!isOpen) return '<details class="ag" data-gid="' + esc(g.id) + '">' + head + '</details>';
     const kwText = g.keywords.map(E.kwToLine).join('\n');
     const negText = g.negatives.map(E.kwToLine).join('\n');
-    const manual = S.bidStrategy === 'manual';
+    const manual = campBid(findC(g.campaignId)) === 'manual';
     return '<details class="ag" data-gid="' + esc(g.id) + '" open>' + head + '<div class="ag-body">' +
       '<div class="grid-3">' +
         '<div class="field"><label class="lbl" for="name-' + g.id + '">Ad group name</label><input id="name-' + g.id + '" data-f="name" value="' + esc(g.name) + '" autocomplete="off"></div>' +
@@ -378,6 +387,7 @@
     '</div></details>';
   }
 
+  const langName = code => { const l = E.LANGS.find(x => x[0] === code); return l ? l[1] : code; };
   const monthlyHint = b => +b > 0 ? 'About ' + money(Math.round(b * 30.4)) + ' a month' : 'Per day';
   function campHTML(c) {
     const ags = state.model.adGroups.filter(g => g.campaignId === c.id);
@@ -391,7 +401,13 @@
         (ags.length ? '' : '<button type="button" class="btn btn-ghost btn-sm danger" data-act="del-camp">Remove</button>') +
       '</div>' +
       '<div class="camp-extra">' +
+        (c.languages && c.languages.length ? '<div class="loc-override"><span>Languages for this campaign:</span>' + c.languages.map(l => '<span class="chip">' + esc(langName(l)) + '</span>').join('') + '<button type="button" class="btn btn-ghost btn-sm" data-act="clear-clang">Use account defaults</button></div>' : '') +
         (locs ? '<div class="loc-override"><span>Locations for this campaign:</span>' + locs.map(l => '<span class="chip">' + esc(l.name) + (l.id ? ' <span class="mono">' + esc(l.id) + '</span>' : '') + '</span>').join('') + '<button type="button" class="btn btn-ghost btn-sm" data-act="clear-cloc">Use account defaults</button></div>' : '') +
+        '<div class="camp-bid"><label class="lbl" for="cbid-' + c.id + '">Bidding</label><select id="cbid-' + c.id + '" data-cf="bid">' +
+          [['', 'Account default (' + BID_LABEL[S.bidStrategy] + ')']].concat(Object.keys(BID_LABEL).map(k => [k, BID_LABEL[k]]))
+            .map(([v, l]) => '<option value="' + v + '"' + ((c.bidStrategy || '') === v ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select>' +
+          (c.bidStrategy === 'tcpa' ? '<label class="lbl" for="ctcpa-' + c.id + '">Target CPA</label><input id="ctcpa-' + c.id + '" type="number" min="0" step="0.01" inputmode="decimal" data-cf="tcpa" value="' + (c.targetCpa != null ? esc(c.targetCpa) : '') + '" placeholder="' + esc(S.targetCpa || 'e.g. 45') + '">' : '') +
+        '</div>' +
         '<details' + (negs.length ? ' open' : '') + '><summary class="hint" style="cursor:pointer">Campaign negatives <span class="mono">' + (negs.length || '') + '</span></summary>' +
           '<textarea id="cneg-' + c.id + '" class="neg-area" data-cf="negatives" spellcheck="false" placeholder="Only for this campaign">' + esc(negs.map(E.kwToLine).join('\n')) + '</textarea></details>' +
       '</div>' +
@@ -439,6 +455,8 @@
         if (t.dataset.cf === 'name') { c.name = t.value; $$('option[value="' + c.id + '"]').forEach(o => { o.textContent = t.value || 'Untitled campaign'; }); }
         else if (t.dataset.cf === 'budget') { c.budget = t.value === '' ? null : +t.value; const h = $('[data-bhint]', cEl); if (h) h.textContent = monthlyHint(c.budget); }
         else if (t.dataset.cf === 'negatives') c.negatives = E.linesToKw(t.value);
+        else if (t.dataset.cf === 'tcpa') c.targetCpa = t.value === '' ? null : +t.value;
+        else if (t.dataset.cf === 'bid') return;
         state.dirty = true;
         refresh(); return;
       }
@@ -461,12 +479,19 @@
       else if (f === 'negatives') { g.negatives = E.linesToKw(t.value); }
       else if (f === 'h' || f === 'd') {
         const i = +t.dataset.i; (f === 'h' ? g.headlines : g.descriptions)[i] = t.value;
-        updateCounter(f + '-' + g.id + '-' + i, E.norm(t.value).length, f === 'h' ? 30 : 90); updateSerp(g);
+        updateCounter(f + '-' + g.id + '-' + i, E.adLen(t.value), f === 'h' ? 30 : 90); updateSerp(g);
       }
       refresh();
     });
     root.addEventListener('change', e => {
       const t = e.target;
+      if (t.dataset.cf === 'bid') {
+        const c = findC(t.closest('[data-cid]').dataset.cid);
+        c.bidStrategy = t.value || null; if (c.bidStrategy !== 'tcpa') c.targetCpa = null;
+        state.dirty = true; renderTree(); syncBidRows(); refresh();
+        const f = $('#ctcpa-' + c.id); if (f) f.focus();
+        return;
+      }
       if (t.dataset.f === 'matchType') {
         const g = findG(t.closest('[data-gid]').dataset.gid);
         g.matchType = t.value || null; state.dirty = true; refresh();
@@ -509,6 +534,11 @@
         const c = findC(cEl.dataset.cid); const ix = state.model.campaigns.indexOf(c);
         state.model.campaigns.splice(ix, 1); renderTree(); refresh();
         toast(c.name + ' removed.', false, () => { state.model.campaigns.splice(ix, 0, c); renderTree(); refresh(); });
+        return;
+      }
+      if (act === 'clear-clang') {
+        const c = findC(cEl.dataset.cid); const prev = c.languages; c.languages = null; state.dirty = true; renderTree(); refresh();
+        toast(c.name + ' now uses the account languages.', false, () => { c.languages = prev; renderTree(); refresh(); });
         return;
       }
       if (act === 'clear-cloc') {
@@ -614,7 +644,7 @@
 
   function fieldEl(er) {
     if (er.scope === 'settings') return er.field ? $('#' + er.field) : null;
-    if (er.scope === 'campaign') return $(er.field === 'name' ? '#cn-' + er.id : er.field === 'negatives' ? '#cneg-' + er.id : '#cb-' + er.id);
+    if (er.scope === 'campaign') return $(er.field === 'name' ? '#cn-' + er.id : er.field === 'negatives' ? '#cneg-' + er.id : er.field === 'tcpa' ? '#ctcpa-' + er.id : '#cb-' + er.id);
     if (er.scope === 'adgroup') {
       if (er.field === 'h' || er.field === 'd') return er.i != null ? $('#' + er.field + '-' + er.id + '-' + er.i) : $('#' + er.field + '-' + er.id);
       if (er.field === 'keywords') return $('#kw-' + er.id);
