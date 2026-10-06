@@ -114,3 +114,37 @@ test('broad match survives a round trip through the keyword box', () => {
   assert.deepEqual(E.linesToKw(box + '\nnew keyword').map(k => k.match), ['broad', 'exact', null]);
   assert.deepEqual(E.linesToKw(g.negatives.map(E.kwToLine).join('\n')), [{ text: 'jobs', match: 'broad' }]);
 });
+
+// Found by testing a real med spa doc (Vida Health Spa) after launch.
+test('a list of towns with the state written once puts every town in that state', () => {
+  const list = locs('Locations: Bloomingdale, IL plus Roselle, Carol Stream, Glendale Heights, Addison, Wheaton, Glen Ellyn, Lombard, St. Charles.');
+  assert.equal(list.length, 9);
+  assert.ok(list.every(l => l.name.endsWith(', Illinois, United States')), JSON.stringify(list));
+  assert.equal(list[8].name, 'St. Charles, Illinois, United States');
+  assert.deepEqual(locs('Locations: Bloomingdale IL plus Roselle and Wheaton').map(l => l.name.split(',')[0]), ['Bloomingdale', 'Roselle', 'Wheaton']);
+  assert.deepEqual(locs('Locations: Austin, TX; Round Rock').map(l => l.name), ['Austin, Texas, United States', 'Round Rock, Texas, United States']);
+  assert.deepEqual(locs('Locations: Trinidad and Tobago').map(l => l.name), ['Trinidad and Tobago']);
+  assert.deepEqual(locs('Locations: Houston, Dallas, Austin').map(l => l.name), ['Houston', 'Dallas', 'Austin']);
+});
+
+test('settings written as sentences still count: "Languages: English."', () => {
+  const m = parseText('Campaign Settings\nLanguages: English, Spanish.\nBidding: Maximize conversions.\n' + AG);
+  assert.deepEqual(m.detected.languages, ['en', 'es']);
+  assert.equal(m.detected.bidStrategy, 'maxconv');
+});
+
+test('"Landing Page: <description>" without a URL is reported as needing one', () => {
+  const m = parseText('Ad Group 1: IT Support\nLanding Page: Managed IT services page with consult CTA\nKeywords\n- it support');
+  const lp = m.skipped.find(s => s.kind === 'lp');
+  assert.ok(lp && /gives no URL/.test(lp.reason));
+  assert.equal(m.adGroups[0].finalUrl, '');
+});
+
+test('a "Note: ..." line between keywords is a note and the keywords after it are kept', () => {
+  const m = parseText('Ad Group 1: IT Support\nKeywords\n- it support\nNote: lowest search volume of the three, watch impression share.\n- managed it\nHeadlines\n- IT Support Experts\nSitelinks: Book Online, Pricing\n- Fast IT Help');
+  const g = byName(m, 'IT Support');
+  assert.deepEqual(g.keywords, ['it support', 'managed it']);
+  assert.deepEqual(g.headlines, ['IT Support Experts', 'Fast IT Help']);
+  assert.ok(m.skipped.some(s => s.kind === 'note' && /^Note:/.test(s.text)));
+  assert.ok(m.skipped.some(s => /"Sitelinks" line/.test(s.reason)));
+});

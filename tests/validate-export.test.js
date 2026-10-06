@@ -117,3 +117,11 @@ test('export: "All countries" writes no location rows; CSV quoting is correct', 
   assert.ok(csv.includes('"Fast, friendly ""IT"" help for small businesses across the whole region."'));
   assert.ok(csv.endsWith('\r\n'));
 });
+
+test('several locations without an ID give one grouped warning', () => {
+  const list = ['Bloomingdale', 'Roselle', 'Wheaton', 'Lombard', 'Itasca', 'Addison'].map(n => ({ name: n + ', Illinois, United States', id: '' }));
+  const v = E.validate(doc(), settings({ locations: list }), TODAY);
+  const w = msgs(v.warnings, /no location ID/);
+  assert.equal(w.length, 1);
+  assert.match(w[0].msg, /^6 locations have no location ID \(Bloomingdale, Illinois, United States; .*; and 2 more\)/);
+});
