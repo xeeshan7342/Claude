@@ -296,6 +296,10 @@
     || /:\s*$/.test(t)
     || /\b(?:max(?:imum)?|min(?:imum)?|limit|up to|at least)\s*(?:of\s*)?\d+\s*(?:chars?|characters|headlines|descriptions|keywords)\b/i.test(t);
 
+  // "12 of 15", "4/4", "max 15", "15 headlines", "(30 chars)": a count, not a name or ad text
+  const isCountNote = t => /\d/.test(t) && !norm(t).toLowerCase()
+    .replace(/\b(?:of|out|headlines?|descriptions?|keywords?|chars?|characters?|max(?:imum)?|min(?:imum)?|up|to|total|used|lines?|written|provided|each|per|ad)\b/g, ' ')
+    .replace(/[\d\s()\[\]\/.,:;+~\-–—]+/g, '');
   const isNameLike = t => {
     const s = norm(t);
     return s.length >= 3 && s.length <= 70 && s.split(' ').length <= 9 && !/[.!?;,]$/.test(s) && !/https?:|www\./i.test(s) && !/:\s*\S/.test(s);
@@ -1201,6 +1205,8 @@
       if (kv && settingLabel(kv[1]) === 'finalUrl') return { k: 'lpnote', level };
       // "Note: ..." or "Sitelinks: ..." on one line is a single note; it does not start a section
       if (sl && sl.inline && sl.sec === 'other') return { k: 'inlineNote', label: sl.label, level };
+      // "Sample RSA Headlines (30 char max) — 12 of 15": a count after the label is not an ad group or an item
+      if (sl && sl.inline && sl.sec !== 'settings' && isCountNote(sl.inline)) return { k: 'section', sec: sl.sec, weak: sl.weak, inline: '', level, matchHint: parseMatch(sl.label || '') };
       if (sl && sl.inline && sl.sec !== 'settings') {
         if (sl.sep === 'dash' && (b.t === 'h' || (b.t === 'p' && b.bold))) {
           return { k: 'section', sec: sl.sec, weak: sl.weak, inline: '', qualifier: sl.inline, level, matchHint: parseMatch(sl.inline) || parseMatch(sl.label || '') };

@@ -90,3 +90,11 @@ test('spreadsheet: one row per item, and a Target CPA column per campaign', () =
     + 'Ad Group: LASIK Surgery\nKeywords\n- lasik cost\nAd Group: Eye Exam\nKeywords\n- eye exam near me');
   assert.deepEqual(k.campaigns.map(c => [c.name, c.bidStrategy || k.detected.bidStrategy, c.targetCpa]), [['LASIK', 'tcpa', 120], ['Eye Exams', 'maxclicks', null]]);
 });
+
+test('a count after a list label is not an ad group: "Sample RSA Headlines (30 char max) — 12 of 15"', () => {
+  const { parseHTML } = require('./helpers');
+  const m = parseHTML('<h3>Medical Weight Loss</h3><p><strong>Keywords:</strong></p><ul><li>medical weight loss</li></ul>'
+    + '<p><strong>Sample RSA Headlines (30 char max) — 3 of 15</strong></p><ul><li>Medical Weight Loss Clinic</li><li>Physician Supervised Plans</li><li>Book A Free Consultation</li></ul>'
+    + '<p><strong>Sample RSA Descriptions (90 char max) — 2 of 4</strong></p><ul><li>Physician led weight loss programs tailored to you. Book your consult today.</li><li>Serving nearby suburbs. Schedule your appointment now with our team.</li></ul>');
+  assert.deepEqual(summary(m).map(g => [g.name, g.headlines.length, g.descriptions.length]), [['Medical Weight Loss', 3, 2]]);
+});
