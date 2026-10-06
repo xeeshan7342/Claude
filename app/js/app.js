@@ -229,7 +229,7 @@
   }
 
   /* ---------------- import report ---------------- */
-  const MAIN_KINDS = new Set(['item', 'label', 'limit', 'ai', 'table']);
+  const MAIN_KINDS = new Set(['item', 'label', 'limit', 'ai', 'table', 'lp']);
   function reportOptions(entry) {
     const g = findG(entry.agId) || currentAg();
     const target = g ? esc(g.name) : 'the first ad group';
@@ -370,7 +370,7 @@
     '</div></details>';
   }
 
-  const monthlyHint = b => +b > 0 ? 'About ' + money(b * 30.4) + ' a month' : 'Per day';
+  const monthlyHint = b => +b > 0 ? 'About ' + money(Math.round(b * 30.4)) + ' a month' : 'Per day';
   function campHTML(c) {
     const ags = state.model.adGroups.filter(g => g.campaignId === c.id);
     const negs = c.negatives || [];

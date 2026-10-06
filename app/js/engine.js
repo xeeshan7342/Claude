@@ -385,6 +385,8 @@
   const nice = p => p === p.toLowerCase() ? titleCase(p) : p;
   const isKnownPlace = p => !!(findCountry(p) || usState(p, false) || province(p, false) || regionState(p) || regionCity(p));
 
+  const AND_NAMES = /\b(?:trinidad and tobago|bosnia and herzegovina|antigua and barbuda|saint kitts and nevis|st\.? kitts and nevis|saint vincent and the grenadines|st\.? vincent and the grenadines|sao tome and principe|são tomé and príncipe|newfoundland and labrador|turks and caicos(?: islands)?|heard island and mcdonald islands|saint pierre and miquelon|wallis and futuna)\b/gi;
+
   function parseLocations(value) {
     let v = norm(value);
     const info = { presence: null, notes: [] };
@@ -394,13 +396,24 @@
     const rad = v.match(/\b(\d+(?:\.\d+)?)\s*(mi|miles?|km|kms|kilomet(?:er|re)s?)\b\s*(?:radius)?\s*(?:of|around|from)?\s*/i);
     if (rad) { info.notes.push('Radius targeting (' + rad[1] + ' ' + rad[2] + ') is not exported. The place itself is targeted; set the radius in Ads Editor.'); v = norm(v.replace(rad[0], ' ')); }
     v = v.replace(/\([^)]*\)/g, ' ').replace(/\b(?:presence only|presence or interest|people in(?: or regularly in)?)\b/gi, ' ');
+    // a sentence-ending full stop is not part of the last place ("St. Charles." -> "St. Charles"), but "D.C." keeps its dots
+    v = norm(v).replace(/(?<!\b[A-Z]\.[A-Z])[.;,]+$/, '');
     const out = [];
     const push = loc => { if (loc.name && !out.some(o => o.name.toLowerCase() === loc.name.toLowerCase())) out.push(loc); };
-    v.split(/\s*(?:;|\||\n|\/)\s*/).map(norm).filter(Boolean).forEach(chunk => {
-      let pieces = chunk.split(/\s+(?:and|&|\+)\s+/i).map(norm).filter(Boolean);
-      if (pieces.length > 1 && !pieces.every(p => p.split(',').map(norm).filter(Boolean).every(isKnownPlace))) pieces = [chunk];
+    // "plus", "along with" and "as well as" always separate places; "and" and "&" only when every side is a known place,
+    // so "Trinidad and Tobago" stays whole
+    v.split(/\s*(?:;|\||\n|\/)\s*|\s+(?:plus|along with|as well as|together with)\s+/i).map(norm).filter(Boolean).forEach(chunk => {
+      // place names that contain "and" are protected before splitting a list on "and" / "&"
+      const kept = [];
+      const masked = chunk.replace(AND_NAMES, m => { kept.push(m); return '\u0000' + (kept.length - 1) + '\u0000'; });
+      const pieces = masked.split(/\s+(?:and|&|\+)\s+/i).map(x => norm(x.replace(/\u0000(\d+)\u0000/g, (_, n) => kept[+n]))).filter(Boolean);
       pieces.forEach(piece => {
-        const parts = piece.split(',').map(p => norm(p).replace(/^(?:and|&)\s+/i, '')).filter(Boolean);
+        const parts = [];
+        piece.split(',').map(p => norm(p).replace(/^(?:and|&)\s+/i, '')).filter(Boolean).forEach(p => {
+          // "Bloomingdale IL" written without a comma
+          const m = p.match(/^(.+?)\s+([A-Z]{2})$/);
+          if (m && (US_STATES[m[2]] || CA_PROVINCES[m[2]]) && !findCountry(p)) { parts.push(m[1], m[2]); } else parts.push(p);
+        });
         const usCtx = parts.filter(p => usState(p, true)).length >= 2 && !parts.some(p => findCountry(p) && !usState(p, true));
         let i = 0;
         while (i < parts.length) {
@@ -410,24 +423,25 @@
           const cityFirst = p.length > 2 && next && /^[A-Za-z]{2}$/.test(next) && !!(US_STATES[next.toUpperCase()] || CA_PROVINCES[next.toUpperCase()]);
           const st = cityFirst ? null : usState(p, usCtx);
           const c = st ? null : findCountry(p);
-          if (c) { push({ name: c.name, id: c.id }); i++; continue; }
+          if (c) { push({ name: c.name, id: c.id, kind: 'country' }); i++; continue; }
           const pr = st || cityFirst ? null : province(p, false);
           const rs = st || pr || cityFirst ? null : regionState(p);
-          let name, country = null, j = i + 1;
+          let name, region = null, country = null, j = i + 1, kind;
           if (st || pr || rs) {
+            kind = 'region';
             name = st || pr || nice(p);
             country = st ? 'United States' : pr ? 'Canada' : rs;
             const qc = j < parts.length ? findCountry(parts[j]) : null;
             if (qc) { country = qc.name; j++; }
           } else {
             // a city: take the region and/or country written after it
+            kind = 'city';
             name = nice(p);
-            let gotRegion = false;
             while (j < parts.length) {
               const q = parts[j];
-              const qs = !gotRegion && !country ? (usState(q, true) || province(q, true) || (regionState(q) ? nice(q) : null)) : null;
+              const qs = !region && !country ? (usState(q, true) || province(q, true) || (regionState(q) ? nice(q) : null)) : null;
               if (qs) {
-                name += ', ' + qs; gotRegion = true; j++;
+                region = qs; j++;
                 country = usState(q, true) ? 'United States' : province(q, true) ? 'Canada' : regionState(q);
                 continue;
               }
@@ -435,15 +449,29 @@
               if (qc) { country = qc.name; j++; }
               break;
             }
-            if (!country) country = regionCity(p);
+            if (!country && !region) { const known = regionCity(p); if (known) { country = known; kind = 'known-city'; } }
           }
-          if (country && !name.toLowerCase().endsWith(country.toLowerCase())) name += ', ' + country;
-          push({ name, id: '' });
+          push({ name, region, country, kind, id: '' });
           i = j;
         }
       });
     });
-    return { list: out, presence: info.presence, notes: info.notes };
+    // One state or country written once for a list of towns applies to all of them:
+    // "Bloomingdale, IL plus Roselle, Carol Stream" -> every town is in Illinois.
+    const quals = [...new Set(out.filter(o => o.kind === 'city' && (o.region || o.country)).map(o => (o.region || '') + '|' + (o.country || '')))];
+    if (quals.length === 1) {
+      const [region, country] = quals[0].split('|');
+      out.forEach(o => { if (o.kind === 'city' && !o.region && !o.country) { o.region = region || null; o.country = country || null; } });
+    }
+    const list = out.map(o => {
+      if (o.kind === 'country') return { name: o.name, id: o.id };
+      let name = o.name;
+      const has = part => name.toLowerCase().endsWith(', ' + part.toLowerCase()) || (o.kind !== 'city' && name.toLowerCase() === part.toLowerCase());
+      if (o.region && !has(o.region)) name += ', ' + o.region;
+      if (o.country && !has(o.country)) name += ', ' + o.country;
+      return { name, id: '' };
+    }).filter((l, i, a) => a.findIndex(x => x.name.toLowerCase() === l.name.toLowerCase()) === i);
+    return { list, presence: info.presence, notes: info.notes };
   }
 
   const money = s => {
@@ -543,7 +571,7 @@
     const u = m[1].replace(/[),.;]+$/, '');
     return /^https?:/i.test(u) ? u : 'https://' + u;
   };
-  const cleanPath = v => norm(v).replace(/^\/+|\/+$/g, '').replace(/\s+/g, '-');
+  const cleanPath = v => norm(v).replace(/[.;,]+$/, '').replace(/^\/+|\/+$/g, '').replace(/\s+/g, '-');
 
   function settingFrom(label, value) {
     const k = settingLabel(label);
@@ -562,7 +590,7 @@
         return list.length || r.presence != null ? { k, v: list, presence: r.presence, notes: r.notes } : null;
       }
       case 'languages': {
-        const parts = v.split(/,|;|\/|\band\b|&|\+/i).map(norm).filter(Boolean);
+        const parts = v.split(/,|;|\/|\band\b|&|\+/i).map(x => norm(x).replace(/[.!:;]+$/, '')).filter(Boolean);
         const codes = parts.map(p => { const f = LANGS.find(([c, n]) => c.toLowerCase() === p.toLowerCase() || n.toLowerCase() === p.toLowerCase() || n.toLowerCase().split(' ')[0] === p.toLowerCase()); return f ? f[0] : null; }).filter(Boolean);
         return codes.length ? { k, v: [...new Set(codes)] } : null;
       }
@@ -722,6 +750,10 @@
       }
       const s = matchSetting(text);
       if (s) return { k: 'setting', s, level };
+      const kv = norm(text).match(/^([^:=]{1,60}?)\s*(?::|=|\s[-–—]\s|[–—])\s*(.+)$/);
+      if (kv && settingLabel(kv[1]) === 'finalUrl') return { k: 'lpnote', level };
+      // "Note: ..." or "Sitelinks: ..." on one line is a single note; it does not start a section
+      if (sl && sl.inline && sl.sec === 'other') return { k: 'inlineNote', label: sl.label, level };
       if (sl && sl.inline && sl.sec !== 'settings') return { k: 'section', sec: sl.sec, weak: sl.weak, inline: sl.inline, level, matchHint: parseMatch(sl.label || '') };
     }
     if (b.t === 'h' || (b.t === 'p' && b.bold && text.length < 100)) return { k: 'heading', level };
@@ -866,7 +898,7 @@
         });
         return last;
       }
-      if (isNoteLine(text)) return { skipIdx: skip(text, 'looks like a note, not ad text') };
+      if (isNoteLine(text)) return { skipIdx: skip(text, 'looks like a note, not ad text', { kind: /^(?:note|notes|tip|tips|important|reminder|n\.?b\.?|todo|tbd)\b/i.test(text) ? 'note' : 'item' }) };
       const c = cleanCopy(text);
       if (!c) return {};
       let pieces = [c];
@@ -979,7 +1011,7 @@
             section = null; secInfo = null;
             lastPlain = { step: stepNo, text, skipIdx: ix };
           } else {
-            skip(text, 'unbulleted note between bulleted items');
+            skip(text, isNoteLine(text) ? 'a note for the team, not ad text' : 'unbulleted note between bulleted items', { kind: isNoteLine(text) ? 'note' : 'item' });
             lastPlain = null;
           }
           return;
@@ -1043,6 +1075,16 @@
         }
         case 'note':
           skip(text, 'ignored because you taught the tool to skip it', { kind: 'taught' }); lastPlain = null;
+          return;
+        case 'inlineNote': {
+          const isNote = /^(?:notes?|tips?|reminders?|important|nb|todo|why|rationale|reasoning|strategy)$/i.test(labelKey(c.label));
+          skip(text, isNote ? 'a note for the team, not ad text' : 'a "' + norm(c.label) + '" line, which is not exported', { kind: isNote ? 'note' : 'other' });
+          lastPlain = null;
+          return;
+        }
+        case 'lpnote':
+          skip(text, 'describes the landing page but gives no URL. Put the page address in this ad group\'s Final URL box.', { kind: 'lp' });
+          lastPlain = null;
           return;
         case 'heading':
           if (inCopy && b.t === 'p') {
@@ -1424,7 +1466,8 @@
     if (usesDefaultLocs && !S.allLocations && !S.locations.length) E({ scope: 'settings', field: 'locations' }, 'Add at least one location, or choose "All countries" if that is really the plan.');
     const allLocs = (usesDefaultLocs && !S.allLocations ? S.locations : []).concat(...used.map(c => c.locations || []));
     const noId = [...new Set(allLocs.filter(l => !l.id).map(l => l.name))];
-    noId.forEach(n => W({ scope: 'settings', field: 'locations' }, '"' + n + '" has no location ID, so Ads Editor will match it by name. Check it landed on the right place after import.'));
+    if (noId.length === 1) W({ scope: 'settings', field: 'locations' }, '"' + noId[0] + '" has no location ID, so Ads Editor will match it by name. Check it landed on the right place after import.');
+    else if (noId.length > 1) W({ scope: 'settings', field: 'locations' }, noId.length + ' locations have no location ID (' + noId.slice(0, 4).join('; ') + (noId.length > 4 ? '; and ' + (noId.length - 4) + ' more' : '') + '), so Ads Editor will match them by name. Check they landed on the right places after import.');
     if (!S.languages.length) W({ scope: 'settings', field: 'languages' }, 'No language set, so campaigns will target all languages.');
     if (S.campaignStatus === 'Enabled') W({ scope: 'settings' }, 'Campaigns will go live as soon as you post in Editor.');
     if (S.startDate && today && S.startDate < today) E({ scope: 'settings', field: 'startDate' }, 'The start date is in the past. Google will not accept it.');
