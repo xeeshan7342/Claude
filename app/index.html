@@ -181,19 +181,43 @@
       <details class="panel" id="aiPanel">
         <summary><h2>AI reading</h2><span class="pill-sm" id="aiState">Optional</span></summary>
         <p class="hint">For docs the rules can't follow. Claude reads the whole doc and the result goes through the same checks.</p>
-        <p class="privacy">This sends the doc text to Anthropic's API using your own API key. Nothing else leaves your browser, and nothing is sent until you click Read with AI.</p>
         <div class="field">
-          <label class="lbl" for="aiKey">Anthropic API key</label>
-          <div class="key-row"><input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."><button type="button" class="btn btn-sm" id="aiKeyShow">Show</button></div>
-          <label class="check"><input type="checkbox" id="aiRemember"><span>Remember on this device<small>Stored in this browser only. Leave off on shared computers.</small></span></label>
+          <span class="lbl" id="aiModeLbl">Use Claude</span>
+          <div class="seg" role="radiogroup" aria-labelledby="aiModeLbl">
+            <label><input type="radio" name="aiMode" value="chat" checked><span>With my Claude plan</span></label>
+            <label><input type="radio" name="aiMode" value="api"><span>With an API key</span></label>
+          </div>
         </div>
-        <div class="field">
-          <label class="lbl" for="aiModel">Model</label>
-          <select id="aiModel"></select>
+        <div id="aiChatBox">
+          <p class="hint">Works with Claude Pro, Max or the free plan. No API key and no extra credit.</p>
+          <ol class="steps">
+            <li><b>Copy for Claude</b>, then paste it into a new chat on <a href="https://claude.ai/new" target="_blank" rel="noopener">claude.ai</a> and send it.</li>
+            <li>When Claude finishes, copy its whole answer and paste it below.</li>
+          </ol>
+          <div class="row"><button type="button" class="btn btn-primary" id="aiCopy">Copy for Claude</button></div>
+          <textarea id="aiPromptBox" readonly hidden aria-label="Prompt for Claude"></textarea>
+          <div class="field">
+            <label class="lbl" for="aiAnswer">Claude's answer</label>
+            <textarea id="aiAnswer" spellcheck="false" placeholder="Paste Claude's whole reply here, code block and all."></textarea>
+          </div>
+          <div class="row"><button type="button" class="btn btn-primary" id="aiUse">Use this answer</button></div>
+          <p class="privacy">The doc only goes to Claude when you paste it into claude.ai yourself.</p>
         </div>
-        <div class="row">
-          <button type="button" class="btn btn-primary" id="aiRun">Read with AI</button>
-          <button type="button" class="btn btn-ghost" id="aiStop" hidden>Stop</button>
+        <div id="aiApiBox" hidden>
+          <p class="privacy">This sends the doc text to Anthropic's API using your own API key, billed to your Anthropic Console credit (separate from a Claude Pro plan). Nothing is sent until you click Read with AI.</p>
+          <div class="field">
+            <label class="lbl" for="aiKey">Anthropic API key</label>
+            <div class="key-row"><input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."><button type="button" class="btn btn-sm" id="aiKeyShow">Show</button></div>
+            <label class="check"><input type="checkbox" id="aiRemember"><span>Remember on this device<small>Stored in this browser only. Leave off on shared computers.</small></span></label>
+          </div>
+          <div class="field">
+            <label class="lbl" for="aiModel">Model</label>
+            <select id="aiModel"></select>
+          </div>
+          <div class="row">
+            <button type="button" class="btn btn-primary" id="aiRun">Read with AI</button>
+            <button type="button" class="btn btn-ghost" id="aiStop" hidden>Stop</button>
+          </div>
         </div>
         <p class="progress" id="aiProgress" aria-live="polite"></p>
         <button type="button" class="btn btn-ghost btn-sm" id="aiBack" hidden>Back to the rule-based read</button>

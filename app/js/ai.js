@@ -7,7 +7,8 @@
 
   const MODELS = [
     { id: 'claude-opus-5-5', label: 'Claude Opus 5.5 (most accurate)', inPerM: 4, outPerM: 20 },
-    { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (faster, cheaper)', inPerM: 2, outPerM: 10 }
+    { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (faster, cheaper)', inPerM: 2, outPerM: 10 },
+    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (cheapest, about a cent a doc)', inPerM: 1, outPerM: 5 }
   ];
   const DEFAULT_MODEL = 'claude-opus-5-5';
 
@@ -100,6 +101,15 @@
 
   function buildRequest(docText, opts) {
     const model = (opts && opts.model) || DEFAULT_MODEL;
+    // Haiku 4.5 takes neither adaptive thinking, effort nor the fallback parameter; the schema still holds the answer to shape
+    if (/haiku/.test(model)) {
+      return {
+        model, max_tokens: 64000,
+        output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+        system: SYSTEM,
+        messages: [{ role: 'user', content: userMessage(docText, opts && opts.hints) }]
+      };
+    }
     return {
       model,
       max_tokens: 64000,
@@ -142,6 +152,48 @@
     try { data = JSON.parse(text); } catch (e) { throw new Error('The AI answer was not valid JSON. Try again.'); }
     checkShape(data);
     return { data, usage: msg.usage || {}, model: msg.model || req.model };
+  }
+
+  // The same job for a person's own Claude plan (Pro, Max or free): a prompt to paste into claude.ai, and a reader for the reply.
+  const TEMPLATE = {
+    title: '',
+    campaigns: [{
+      name: '', budget_amount: null, budget_period: 'daily | monthly | weekly | not_stated', locations: [], final_url: '',
+      bid_strategy: 'maximize_clicks | maximize_conversions | target_cpa | manual_cpc | not_stated', target_cpa: null,
+      negative_keywords: [{ text: '', match_type: 'exact | phrase | broad | default' }],
+      ad_groups: [{ name: '', keywords: [{ text: '', match_type: 'exact | phrase | broad | default' }], negative_keywords: [], headlines: [], descriptions: [], final_url: '', path1: '', path2: '' }]
+    }],
+    account_negative_keywords: [],
+    settings: {
+      final_url: '', bid_strategy: 'maximize_clicks | maximize_conversions | target_cpa | manual_cpc | not_stated', target_cpa: null, max_cpc: null,
+      default_match_type: 'phrase | exact | broad | phrase_and_exact | not_stated', locations: [], presence_only: 'yes | no | not_stated',
+      languages: [], search_partners: 'yes | no | not_stated', start_date: ''
+    },
+    unused_text: [{ text: '', reason: '' }]
+  };
+  function chatPrompt(docText, hints) {
+    return [
+      SYSTEM,
+      'Reply with one JSON object and nothing else, inside a single ```json code block. Use exactly this shape (for fields with options, pick one option; use null, "" or [] when the document does not say):',
+      JSON.stringify(TEMPLATE, null, 1),
+      'If the answer gets long, keep writing until the JSON is complete.',
+      userMessage(docText, hints)
+    ].join('\n\n');
+  }
+  // A reply pasted back from claude.ai: code fences, a "continue" split or text around the JSON are fine
+  function parseChatAnswer(text) {
+    const t = String(text || '').replace(/```(?:json)?/gi, '');
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a < 0) throw new Error('No JSON found in the pasted answer. Copy Claude\'s whole reply, including the code block.');
+    const incomplete = 'The pasted answer is not complete JSON. If Claude stopped early, ask it to continue, then paste the whole answer.';
+    if (b <= a) throw new Error(incomplete);
+    let data;
+    try { data = JSON.parse(t.slice(a, b + 1)); } catch (e) { throw new Error(incomplete); }
+    data.account_negative_keywords = data.account_negative_keywords || [];
+    data.settings = data.settings || {};
+    data.unused_text = data.unused_text || [];
+    checkShape(data);
+    return data;
   }
 
   function checkShape(d) {
@@ -229,7 +281,7 @@
     return res;
   }
 
-  const api = { MODELS, DEFAULT_MODEL, SCHEMA, SYSTEM, buildRequest, read, toResult, friendlyError, costOf, hintsFromMemory, userMessage };
+  const api = { MODELS, DEFAULT_MODEL, SCHEMA, SYSTEM, buildRequest, read, toResult, friendlyError, costOf, hintsFromMemory, userMessage, chatPrompt, parseChatAnswer };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CBAI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

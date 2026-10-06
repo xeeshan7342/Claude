@@ -763,10 +763,20 @@
     $('#aiKey').addEventListener('change', e => { if ($('#aiRemember').checked) store.set(KEY_STORE, e.target.value.trim()); });
     $('#aiKeyShow').addEventListener('click', () => { const k = $('#aiKey'); const show = k.type === 'password'; k.type = show ? 'text' : 'password'; $('#aiKeyShow').textContent = show ? 'Hide' : 'Show'; });
     $('#aiRun').addEventListener('click', runAI);
+    // with my Claude plan (copy and paste through claude.ai) or with an API key
+    const setMode = mode => {
+      $$('input[name="aiMode"]').forEach(r => { r.checked = r.value === mode; });
+      $('#aiChatBox').hidden = mode !== 'chat'; $('#aiApiBox').hidden = mode !== 'api';
+    };
+    setMode(store.get('cbb.aiMode') === 'api' ? 'api' : 'chat');
+    $$('input[name="aiMode"]').forEach(r => r.addEventListener('change', e => { store.set('cbb.aiMode', e.target.value); setMode(e.target.value); }));
+    $('#aiCopy').addEventListener('click', copyForClaude);
+    $('#aiUse').addEventListener('click', useChatAnswer);
     $('#aiQuick').addEventListener('click', () => {
       $('#aiPanel').open = true;
-      if ($('#aiKey').value.trim()) runAI();
-      else { $('#aiPanel').scrollIntoView({ block: 'start' }); $('#aiKey').focus(); toast('Add your Anthropic API key to read with AI.'); }
+      const api = $('input[name="aiMode"]:checked').value === 'api';
+      if (api && $('#aiKey').value.trim()) runAI();
+      else { $('#aiPanel').scrollIntoView({ block: 'start' }); (api ? $('#aiKey') : $('#aiCopy')).focus(); toast(api ? 'Add your Anthropic API key to read with AI.' : 'Copy for Claude, paste it into claude.ai, then paste the answer back here.'); }
     });
     $('#aiStop').addEventListener('click', () => { if (state.aiAbort) state.aiAbort.abort(); });
     $('#aiBack').addEventListener('click', () => {
@@ -775,6 +785,32 @@
       loadModel(state.ruleModel, {});
       $('#aiState').textContent = 'Optional'; $('#aiState').className = 'pill-sm';
     });
+  }
+  function copyForClaude() {
+    if (!state.source || !state.source.blocks.length) { toast('Load a doc first.', true); return; }
+    const text = AI.chatPrompt(E.blocksToText(state.source.blocks), AI.hintsFromMemory(mem.labels()));
+    const box = $('#aiPromptBox');
+    const manual = () => { box.value = text; box.hidden = false; box.focus(); box.select(); toast('Copy the selected text, then paste it into claude.ai.'); };
+    let p;
+    try { p = navigator.clipboard.writeText(text); } catch (e) { p = Promise.reject(e); }
+    p.then(() => { box.hidden = true; toast('Copied. Paste it into a new chat on claude.ai, then paste the answer back here.'); }, manual);
+  }
+  function useChatAnswer() {
+    if (!state.source) { toast('Load a doc first.', true); return; }
+    try {
+      const data = AI.parseChatAnswer($('#aiAnswer').value);
+      showAiResult(E.buildModel(AI.toResult(data), state.source.name), 'Read by Claude through your Claude plan.');
+      $('#aiProgress').textContent = 'Using the answer from claude.ai.';
+    } catch (e) {
+      $('#aiProgress').textContent = e.message; toast(e.message, true);
+    }
+  }
+  function showAiResult(result, info) {
+    state.aiInfo = info;
+    state.aiModel = result; state.readMode = 'ai';
+    loadModel(result, { announce: true });
+    $('#aiBack').hidden = !state.ruleModel;
+    $('#aiState').textContent = 'In use'; $('#aiState').className = 'pill-sm ok';
   }
   async function runAI() {
     if (!state.source || !state.source.blocks.length) { toast('Load a doc first.', true); return; }
@@ -799,12 +835,8 @@
       });
       const result = E.buildModel(AI.toResult(out.data), state.source.name);
       const cost = AI.costOf(out.usage, out.model);
-      state.aiInfo = 'Read by AI (' + out.model + '). Used ' + (out.usage.input_tokens || 0).toLocaleString() + ' input and ' + (out.usage.output_tokens || 0).toLocaleString() + ' output tokens, about $' + cost.toFixed(2) + '.';
-      state.aiModel = result; state.readMode = 'ai';
-      loadModel(result, { announce: true });
-      $('#aiBack').hidden = !state.ruleModel;
+      showAiResult(result, 'Read by AI (' + out.model + '). Used ' + (out.usage.input_tokens || 0).toLocaleString() + ' input and ' + (out.usage.output_tokens || 0).toLocaleString() + ' output tokens, about $' + cost.toFixed(2) + '.');
       $('#aiProgress').textContent = 'Done in ' + Math.round((Date.now() - started) / 1000) + 's. About $' + cost.toFixed(2) + '.';
-      $('#aiState').textContent = 'In use'; $('#aiState').className = 'pill-sm ok';
     } catch (e) {
       const f = AI.friendlyError(e, window.Anthropic);
       $('#aiProgress').textContent = f.message;

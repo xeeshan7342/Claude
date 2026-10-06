@@ -146,3 +146,30 @@ test('AI: refusals and truncated answers become clear errors', async () => {
   await assert.rejects(AI.read(fake({ stop_reason: 'max_tokens', content: [] }), 'doc'), /too long/);
   await assert.rejects(AI.read(fake({ stop_reason: 'end_turn', content: [{ type: 'text', text: '{"x":1}' }] }), 'doc'), /expected shape/);
 });
+
+test('AI with a Claude plan: a prompt to paste into claude.ai, and the pasted reply goes through the same model', () => {
+  const prompt = AI.chatPrompt('# Plumbing\nAd Group 1: Drains\nKeywords\n- drain cleaning', []);
+  assert.match(prompt, /```json/);
+  assert.match(prompt, /"account_negative_keywords"/);
+  assert.match(prompt, /<document>[\s\S]*drain cleaning[\s\S]*<\/document>/);
+  const reply = 'Here is the structure:\n```json\n' + JSON.stringify({
+    title: 'Plumbing', campaigns: [{ name: 'Plumbing', budget_amount: 30, budget_period: 'daily', locations: ['Austin, TX'], final_url: '', bid_strategy: 'not_stated', target_cpa: null,
+      negative_keywords: [], ad_groups: [{ name: 'Drains', keywords: [{ text: 'drain cleaning', match_type: 'phrase' }], negative_keywords: [], headlines: ['Drain Cleaning Pros'], descriptions: [], final_url: '', path1: '', path2: '' }] }],
+    settings: { final_url: 'https://www.example.com' }
+  }) + '\n```\nLet me know if you need changes.';
+  const m = E.buildModel(AI.toResult(AI.parseChatAnswer(reply)), 'doc.docx');
+  assert.deepEqual(m.adGroups.map(g => [g.name, g.keywords.map(E.kwToLine)]), [['Drains', ['"drain cleaning"']]]);
+  assert.equal(m.campaigns[0].budget, 30);
+  assert.throws(() => AI.parseChatAnswer('Sorry, I cannot help with that.'), /No JSON found/);
+  assert.throws(() => AI.parseChatAnswer('```json\n{"campaigns": [{"name": "x"'), /not complete JSON/);
+});
+
+test('AI with an API key: Haiku 4.5 is the cheapest option and gets a request it accepts', () => {
+  const haiku = AI.MODELS.find(m => m.id === 'claude-haiku-4-5');
+  assert.ok(haiku);
+  const req = AI.buildRequest('doc', { model: 'claude-haiku-4-5' });
+  assert.equal(req.thinking, undefined);
+  assert.equal(req.fallbacks, undefined);
+  assert.equal(req.output_config.effort, undefined);
+  assert.equal(req.output_config.format.type, 'json_schema');
+});

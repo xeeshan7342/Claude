@@ -253,6 +253,9 @@ details.panel[open] > summary h2::before { content: "▾ "; }
 details.panel:not([open]) { gap: 0; }
 
 .profile-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; }
+#aiAnswer, #aiPromptBox { min-height: 90px; font-family: var(--f-mono); font-size: 12px; }
+#aiChatBox, #aiApiBox { display: grid; gap: 10px; }
+#aiChatBox[hidden], #aiApiBox[hidden] { display: none; }
 .privacy { font-size: 12px; color: var(--ink-2); background: var(--surface-2); border-radius: 6px; padding: 8px 10px; }
 .progress { font: 12px var(--f-mono); color: var(--ink-2); }
 .key-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }

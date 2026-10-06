@@ -41,12 +41,12 @@ Taught labels and saved **client profiles** (final URL, locations, languages, bi
 
 ## AI reading
 
-For docs the rules can't follow, open **AI reading**, paste an Anthropic API key (create one at console.anthropic.com) and click **Read with AI**. Claude reads the whole doc and returns the structure as JSON that must match a fixed schema. The result goes through the same model, checks and export as the rule-based read, and anything Claude could not place shows up in the import report. **Back to the rule-based read** switches back.
+For docs the rules can't follow, open **AI reading**. There are two ways to use it:
 
-- Default model: Claude Opus 5.5. Claude Sonnet 5.5 is offered as a faster, cheaper option. Cost depends on the length of the doc; the tool shows the exact token use and cost after each read.
-- If Claude declines a request, the API retries it on Anthropic's recommended fallback model automatically (server-side fallbacks).
-- Taught labels from memory are passed to Claude as hints.
-- The key is only kept while the page is open unless you tick **Remember on this device**. Pages on `xeeshan7342.github.io` share browser storage, so leave it off on shared computers.
+- **With my Claude plan** (Pro, Max or free, no API key): click **Copy for Claude**, paste it into a new chat on claude.ai, then paste Claude's whole answer back and click **Use this answer**.
+- **With an API key**: paste an Anthropic API key (create one at console.anthropic.com; API use is billed separately from a Claude plan) and click **Read with AI**. Claude Haiku 4.5 is the cheapest option.
+
+Either way Claude returns the structure as JSON in a fixed shape. The result goes through the same model, checks and export as the rule-based read, and anything Claude could not place shows up in the import report. **Back to the rule-based read** switches back.
 
 ## Checks before export
 
