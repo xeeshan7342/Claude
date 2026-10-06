@@ -117,3 +117,22 @@ test('table-format doc: a layout key table, a settings table whose text says "bu
   assert.ok(m.skipped.some(s => s.kind === 'other' && /laid out/.test(s.reason)));
   assert.ok(m.skipped.some(s => s.kind === 'lp') && m.skipped.some(s => s.kind === 'note' && /competitive/.test(s.text)));
 });
+
+test('table doc with "MH | Cancer | Search" campaign names, a Why column, location advice and a max CPC per campaign', () => {
+  const { parseHTML } = require('./helpers');
+  const tbl = rows => '<table>' + rows.map(r => '<tr>' + r.map(c => '<td><p>' + c + '</p></td>').join('') + '</tr>').join('') + '</table>';
+  const W = 'MH | Cancer | Search | West Africa', E2 = 'MH | Cancer | Search | East Africa';
+  const m = parseHTML('<p><strong>1. Campaign Settings</strong></p>' + tbl([['Setting', 'Value', 'Why'], ['Locations', 'Per campaign below. Add each country individually.', 'Lets you compare countries.'], ['Language', 'English', 'Add French ads later if English traffic is low.']])
+    + '<p><strong>2. Campaign Budgets</strong></p>' + tbl([['Campaign', 'Locations', 'Daily budget (INR)', 'Starting max CPC (INR)', 'Bid strategy'],
+      [W, 'Nigeria, Cameroon, The Gambia. Add Ghana if offered.', '500', '50', 'Manual CPC at launch.'], [E2, 'Kenya, Uganda', '500', '50', 'Manual CPC at launch.']])
+    + '<p><strong>3. Keywords</strong></p>' + tbl([['Campaign', 'Ad Group', 'Match Type', 'Keyword', 'Final URL'], [W, 'Breast Cancer', 'Phrase', 'breast cancer treatment in india', 'https://www.example.com/breast'], [E2, 'Breast Cancer', 'Exact', 'breast cancer treatment in india', 'https://www.example.com/breast']])
+    + '<p><strong>4. Responsive Search Ads</strong></p>' + tbl([['Campaign', 'Ad Group', 'Asset Type', 'Position', 'Text', 'Pin'], [W, 'Breast Cancer', 'Headline', '1', 'Breast Cancer Care India', '1'], [E2, 'Breast Cancer', 'Headline', '1', 'Breast Cancer Care India', '1']])
+    + '<p>Total ad asset rows: 2.</p><p><strong>5. Negative Keywords</strong></p><p>Create one shared negative keyword list and apply it to both campaigns.</p>'
+    + tbl([['Negative Keyword', 'Match Type', 'Reason'], ['jobs', 'Phrase', 'Jobs and education'], ['free treatment', 'Phrase', 'Free care seekers']]));
+  assert.deepEqual(m.campaigns.map(c => [c.name, c.budget, c.locations.map(l => l.name)]), [[W, 500, ['Nigeria', 'Cameroon', 'The Gambia']], [E2, 500, ['Kenya', 'Uganda']]]);
+  assert.deepEqual(summary(m).map(g => [g.name, g.campaign, g.headlines, g.negatives]), [['Breast Cancer', W, ['Breast Cancer Care India'], []], ['Breast Cancer', E2, ['Breast Cancer Care India'], []]]);
+  assert.deepEqual(m.accountNegatives.map(E.kwToLine), ['"jobs"', '"free treatment"']);
+  assert.deepEqual([m.detected.languages, m.detected.locations, m.detected.bidStrategy, m.detected.maxCpc], [['en'], undefined, 'manual', 50]);
+  assert.ok(m.notes.some(n => /Not used from the locations: "Add Ghana if offered\."/.test(n.msg)));
+  assert.ok(m.notes.some(n => /Pins are not exported/.test(n.msg)));
+});

@@ -663,6 +663,16 @@
     if (/\bpresence\b/i.test(v)) info.presence = !/\binterest\b/i.test(v) || /presence only/i.test(v);
     const ex = v.match(/[,;(]?\s*\b(?:excluding|exclude[sd]?|except|but not|not including|minus|without)\b\s*:?\s*([^)]*)\)?\s*$/i);
     if (ex) { info.notes.push('Excluded locations (' + norm(ex[1]) + ') are not exported. Add them in Ads Editor as excluded locations.'); v = v.slice(0, ex.index); }
+    // "Per campaign below." or "See the campaign table": the places are given elsewhere
+    if (/^(?:per campaign|by campaign|varies by campaign|see (?:below|above|the campaign|campaign|each campaign)|set per campaign|tbd|tbc|to be (?:confirmed|decided))\b/i.test(v)) return { list: [], presence: info.presence, notes: [] };
+    // "Nigeria, Cameroon, The Gambia. Add Ghana and Liberia if offered.": the places end at the first full sentence
+    v = v.replace(/\bD\.\s?C\.?(?=\s|,|;|$)/g, 'DC');
+    const sb = v.match(/\b(?!(?:ste|sta|sto|mte|mts|mtn|ave|blvd|hwy|dept|govt|est|inc|ltd|corp)\.)([\p{L}]{3,}|[A-Z]{2})\.\s+(?=\p{Lu})/u);
+    if (sb) {
+      const rest = norm(v.slice(sb.index + sb[0].length));
+      if (/\p{L}/u.test(rest)) info.notes.push('Not used from the locations: "' + rest + '" Add those places by hand if you want them.');
+      v = v.slice(0, sb.index + sb[1].length);
+    }
     const rad = v.match(/\b(\d+(?:\.\d+)?)\s*(mi|miles?|km|kms|kilomet(?:er|re)s?)\b\s*(?:radius)?\s*(?:of|around|from)?\s*/i);
     if (rad) { info.notes.push('Radius targeting (' + rad[1] + ' ' + rad[2] + ') is not exported. The place itself is targeted; set the radius in Ads Editor.'); v = norm(v.replace(rad[0], ' ')); }
     // "UAE (Dubai & Abu Dhabi only)": the places in brackets replace the country
@@ -1028,7 +1038,7 @@
     if (/\(\s*(?:campaign |account |ad ?group |shared )?(?:level )?negatives?(?: key ?words?)?\s*\)/i.test(norm(cell))) return 'negatives';
     // a column header is a few words; "Search Network only, no Search Partners at this budget." is a value
     if (!t || t.split(' ').length > 8 || /[.!?]$/.test(norm(cell))) return null;
-    if (/^(?:#|no|no\.|sr|sr\.|s\.? ?no\.?|sl|serial|chars?|characters?|char(?:acter)? count|count|length|len|character length|status|notes?|comments?|pin(?:ned)?|position|priority|rank|volume|search volume|avg\.? monthly searches|monthly searches|searches|competition|competition index|cpc|avg\.? cpc|est\.? cpc|top of page bid.*|bid range|intent|difficulty|kd|trend|source|type|value)$/.test(t)) return 'ignore';
+    if (/^(?:#|no|no\.|sr|sr\.|s\.? ?no\.?|sl|serial|chars?|characters?|char(?:acter)? count|count|length|len|character length|status|notes?|comments?|why|reasons?|rationale|explanation|purpose|pin(?:ned)?|position|priority|rank|volume|search volume|avg\.? monthly searches|monthly searches|searches|competition|competition index|cpc|avg\.? cpc|est\.? cpc|top of page bid.*|bid range|intent|difficulty|kd|trend|source|type|value)$/.test(t)) return 'ignore';
     if (/^(?:sitelinks?(?: text| title| name| link text)?|callouts?(?: text)?|structured snippets?|snippets?(?: values?| header)?|extensions?|assets?(?: type)?|promotions?(?: text)?|price(?: assets?)?|image(?: assets?)?|call (?:asset|extension)s?)$/.test(t)) return 'asset';
     if (/^(?:platform|channel|network|ad platform|media|source platform)$/.test(t)) return 'platform';
     if (/^(?:applied to|apply to|applies to|scope|level|used in|use in|campaigns? applied)$/.test(t)) return 'scope';
@@ -1049,7 +1059,7 @@
     if (/budget/.test(t) && t.split(' ').length <= 5) return 'budget';
     if (/^(?:target )?(?:locations?|geos?|geo targeting|location targeting|geography|countries|cities|regions?|markets?)$/.test(t)) return 'locations';
     if (/^(?:target )?languages?$/.test(t)) return 'languages';
-    if (/^(?:max\.? ?cpc|default (?:max )?cpc|ad group (?:max )?cpc|max(?:imum)? cpc bid|default bid)$/.test(t)) return 'maxCpc';
+    if (/^(?:(?:starting|initial|default|ad group|campaign|launch)\s+)?(?:max\.? ?cpc|max(?:imum)? cpc(?: bid)?|cpc bid|default bid|max bid)$/.test(t)) return 'maxCpc';
     return null;
   }
   const COPY_FIELDS = new Set(['keywords', 'negatives', 'headlines', 'descriptions']);
@@ -1081,14 +1091,17 @@
     const h0 = (rows[0] || []).map(c => norm(c).toLowerCase());
     const legendHead = /^(?:sections?|tables?|tabs?|sheets?|parts?|blocks?|terms?|columns?|fields?)$/.test(h0[0] || '')
       && h0.slice(1).some(c => /\b(?:headers?|columns?|format|meaning|means|description|explanation|purpose|contains|equals|definition)\b/.test(c));
-    const pipeRows = rows.slice(1).filter(r => r.some(c => /\S \| \S/.test(c))).length;
-    if (legendHead || (rows.length >= 4 && pipeRows >= (rows.length - 1) * 0.6)) return { kind: 'legend', rows };
+    if (legendHead) return { kind: 'legend', rows };
     // header row: the first of the first 3 rows with the most recognised field columns
     let hi = -1, best = 0;
     for (let r = 0; r < Math.min(3, rows.length); r++) {
       const f = rows[r].map(hdrField).filter(x => x && x !== 'ignore').length;
       if (f > best) { best = f; hi = r; }
     }
+    // with no header the tool knows, cells that list "Campaign | Ad Group | Keyword" describe a layout
+    // ("MH | Cancer | Search" as a campaign name under a Campaign header is data)
+    const pipeRows = rows.slice(1).filter(r => r.some(c => /\S \| \S/.test(c))).length;
+    if (hi < 0 && rows.length >= 4 && pipeRows >= (rows.length - 1) * 0.6) return { kind: 'legend', rows };
     const fields = hi >= 0 ? rows[hi].map(hdrField) : [];
     const has = f => fields.includes(f);
     if (hi >= 0) {
@@ -1321,7 +1334,7 @@
     opts = opts || {};
     const res = {
       title: '', campaignHint: '', mapping: [], adGroups: [], accountNegatives: [], campaignNegatives: {}, campaignNegNames: {}, campaignLocations: {},
-      settings: {}, campaignBudgets: {}, campaignBids: {}, campaignUrls: {}, campaignLangs: {}, globalBudget: null, agProps: [], notes: [], skipped: []
+      settings: {}, campaignBudgets: {}, campaignBids: {}, campaignUrls: {}, campaignLangs: {}, campaignMaxCpc: {}, globalBudget: null, agProps: [], notes: [], skipped: []
     };
     const cls = blocks.map(b => classify(b, opts.memory));
     const shapes = blocks.map(b => b.t === 'table' ? tableShape(b.rows) : null);
@@ -1760,6 +1773,12 @@
       const rows = shape.rows;
       lastPlain = null;
       const firstRow = (rows[0] || []).filter(Boolean).join(' | ');
+      // a Pin column with values: pins are not exported, so say so once
+      const pinCol = (rows[shape.hi || 0] || []).findIndex(c => /^pin(?:ned)?(?:\s+(?:to|position))?$/i.test(norm(c)));
+      if (pinCol >= 0 && !res.pinNote && rows.slice((shape.hi || 0) + 1).some(r => norm(r[pinCol] || '') && !/^[-–—]$/.test(norm(r[pinCol])))) {
+        res.pinNote = true;
+        res.notes.push({ level: 'info', msg: 'The doc pins some headlines or descriptions. Pins are not exported; set them in Ads Editor after import if you want them.' });
+      }
       if (shape.kind === 'legend') { skip(firstRow, 'explains how the doc is laid out, so it is not imported', { kind: 'other' }); return; }
       if (shape.kind === 'assets') { skip(firstRow, 'sitelink, callout or other asset table, which is not exported', { kind: 'other' }); return; }
       if (shape.kind === 'comparison') { skip(firstRow, 'comparison table between platforms, not ad content', { kind: 'other' }); return; }
@@ -1795,6 +1814,8 @@
       };
       // a campaign table's own Locations and Languages columns
       const campCols = (fields, r, camp) => {
+        const ci2 = fields.indexOf('maxCpc');
+        if (ci2 >= 0 && r[ci2]) { const n = money(r[ci2]); if (n > 0) res.campaignMaxCpc[key(camp)] = n; }
         const li = fields.indexOf('locations'), gi = fields.indexOf('languages');
         if (li >= 0 && r[li]) { const st = settingFrom('Locations', r[li]); if (st && st.v.length) res.campaignLocations[key(camp)] = st.v; (st && st.notes || []).forEach(msg => res.notes.push({ level: 'warn', msg: camp + ': ' + msg })); }
         if (gi >= 0 && r[gi]) { const st = settingFrom('Languages', r[gi]); if (st && st.v.length) res.campaignLangs[key(camp)] = { name: camp, v: st.v }; }
@@ -1824,6 +1845,7 @@
           addItem(/^h/i.test(m[1]) ? 'headlines' : 'descriptions', v.replace(/\n/g, ' '), true);
           return;
         }
+        if (/\b(?:suffix|template|tracking|utm|parameters?)\b/i.test(label)) { skip(label + ': ' + norm(v), 'tracking setting, not exported. Set it in Ads Editor if you use it.', { kind: 'other' }); return; }
         if (/\b(?:final url|landing page|lp|url)\b/i.test(label) && !findUrl(v)) { skip(label + ': ' + norm(v), 'describes the landing page but gives no URL. Put the page address in this ad group\'s Final URL box.', { kind: 'lp' }); return; }
         if (/^(?:sitelinks?|callouts?|structured snippets?|snippets?)\b/i.test(label)) { skip(label + ': ' + norm(v), 'in the "' + label + '" row, which is not exported', { kind: 'other' }); return; }
         const sl = sectionLabel(label);
@@ -1849,7 +1871,9 @@
           campCtx = curCamp || prevCamp; ag = curAg || prevAg;
           kvApply(norm(r[ei] || ''), r[vi] || '');
         });
-        ag = prevAg; campCtx = prevCamp;
+        // a table that names its own ad groups leaves none open: "Total ad rows: 440" or a negatives list after it is not theirs
+        if (ai >= 0) { ag = null; agLevel = 99; section = null; secInfo = null; } else ag = prevAg;
+        campCtx = prevCamp;
         return;
       }
       if (shape.kind === 'kv') {
@@ -2014,7 +2038,7 @@
           });
           campCtx = prevCamp;
         });
-        if (col('adgroup') >= 0) ag = prevAg;
+        if (col('adgroup') >= 0) { ag = null; agLevel = 99; if (section && COPY.has(section)) { section = null; secInfo = null; } }
         finishOther();
         return;
       }
@@ -2129,7 +2153,7 @@
   const fmtNum = n => (Math.round(n * 100) / 100).toLocaleString('en-US');
 
   function buildModel(res, sourceName) {
-    ['campaignNegatives', 'campaignNegNames', 'campaignLocations', 'campaignBudgets', 'campaignBids', 'campaignUrls', 'campaignLangs'].forEach(f => { res[f] = res[f] || {}; });
+    ['campaignNegatives', 'campaignNegNames', 'campaignLocations', 'campaignBudgets', 'campaignBids', 'campaignUrls', 'campaignLangs', 'campaignMaxCpc'].forEach(f => { res[f] = res[f] || {}; });
     const model = {
       source: sourceName || '', title: res.title, campaigns: [], adGroups: [], accountNegatives: res.accountNegatives.slice(),
       notes: [], skipped: [], detected: res.settings
@@ -2268,6 +2292,10 @@
     if (acctLocs.length && suffixes.length === 1 && acctLocs.every(l => !l.id)) {
       model.campaigns.forEach(c => (c.locations || []).forEach(l => { if (!l.id && !/,/.test(l.name)) l.name += ', ' + suffixes[0]; }));
     }
+    // "Starting max CPC" per campaign: one value for all is the account default, otherwise each ad group takes its campaign's
+    const cpcs = model.campaigns.map(c => res.campaignMaxCpc[key(c.name)]).filter(n => n > 0);
+    if (cpcs.length && cpcs.length === model.campaigns.length && new Set(cpcs).size === 1 && !res.settings.maxCpc) res.settings.maxCpc = cpcs[0];
+    else model.campaigns.forEach(c => { const n = res.campaignMaxCpc[key(c.name)]; if (n > 0) model.adGroups.forEach(g => { if (g.campaignId === c.id && g.maxCpc == null) g.maxCpc = n; }); });
     // a campaign setting that matches the account default is not shown twice
     model.campaigns.forEach(c => {
       if (c.languages && res.settings.languages && c.languages.slice().sort().join(',') === res.settings.languages.slice().sort().join(',')) c.languages = null;
